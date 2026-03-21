@@ -1,0 +1,40 @@
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: max-content;
+  }
+  
+  .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .markRed,
+  .markGray {
+    width: 12px;
+    height: 28px;
+    border-radius: 999px;
+  }
+  
+  .markRed {
+    background: #e4312d;
+  }
+  
+  .markGray {
+    background: #7d7d7d;
+  }
+  
+  .text {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #4a4a4a;
+  }
+  
+  @media (max-width: 640px) {
+    .text {
+      font-size: 22px;
+    }
+  }

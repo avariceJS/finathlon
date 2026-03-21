@@ -1,0 +1,12 @@
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1120px;
+  }
+  
+  .paragraph {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #232323;
+  }

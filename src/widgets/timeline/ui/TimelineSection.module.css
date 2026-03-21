@@ -1,0 +1,114 @@
+.timeline {
+    position: relative;
+    padding: 48px 0 24px;
+  }
+  
+  .track {
+    position: relative;
+    height: 4px;
+    background: linear-gradient(
+      90deg,
+      #d9d9d9 0%,
+      #efefef 10%,
+      #d9d9d9 20%,
+      #efefef 30%,
+      #d9d9d9 40%,
+      #efefef 50%,
+      #d9d9d9 60%,
+      #efefef 70%,
+      #d9d9d9 80%,
+      #efefef 90%,
+      #d9d9d9 100%
+    );
+  }
+  
+  .event {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+  }
+  
+  .markerWrap {
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .markerRed,
+  .markerBlue {
+    display: block;
+    width: 2px;
+    height: 52px;
+  }
+  
+  .markerRed {
+    background: #e4312d;
+  }
+  
+  .markerBlue {
+    background: #59b7f9;
+  }
+  
+  .eventCard {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+    transform: translateY(-4px);
+  }
+  
+  .eventDate {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+  
+  .eventLabel {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  
+  .years {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 18px;
+  }
+  
+  .year {
+    font-size: 20px;
+    font-weight: 600;
+    color: #4a4a4a;
+  }
+  
+  @media (max-width: 960px) {
+    .timeline {
+      padding-top: 24px;
+    }
+  
+    .event {
+      position: static;
+      transform: none;
+      margin-bottom: 24px;
+    }
+  
+    .track {
+      display: none;
+    }
+  
+    .markerWrap {
+      position: static;
+      transform: none;
+      margin-bottom: 8px;
+    }
+  
+    .markerRed,
+    .markerBlue {
+      width: 48px;
+      height: 4px;
+    }
+  
+    .years {
+      gap: 24px;
+      justify-content: flex-start;
+    }
+  }

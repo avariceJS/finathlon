@@ -1,0 +1,37 @@
+.card {
+    overflow: hidden;
+    border-radius: 0;
+    background: var(--color-bg-surface);
+    transition:
+      transform var(--transition-base),
+      box-shadow var(--transition-base);
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+  
+  .image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    background: #cfcaca;
+  }
+  
+  .imageText {
+    font-size: 30px;
+    font-weight: 500;
+    color: #2f2f2f;
+  }
+  
+  .footer {
+    padding: 20px 24px;
+    background: #dedede;
+  }
+  
+  .title {
+    font-size: 20px;
+    font-weight: 500;
+  }
