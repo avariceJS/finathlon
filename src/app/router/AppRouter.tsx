@@ -1,11 +1,14 @@
-import { Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 
+import { AccountPage } from '@/pages/account/ui/AccountPage'
 import { HomePage } from '@/pages/home/ui/HomePage'
 
 export function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/account" element={<Navigate to="/account/personal" replace />} />
+      <Route path="/account/:section" element={<AccountPage />} />
     </Routes>
   )
 }

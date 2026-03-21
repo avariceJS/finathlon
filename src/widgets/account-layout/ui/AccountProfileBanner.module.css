@@ -1,0 +1,33 @@
+.banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 248px;
+    padding: 28px;
+    background: #ededed;
+    border-bottom: 1px solid #e2e2e2;
+  }
+  
+  .avatar {
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #b3b3b3 14%, transparent 15%),
+      radial-gradient(circle at 50% 72%, #8f8f8f 30%, transparent 31%),
+      #d3d3d3;
+  }
+  
+  .name {
+    margin-top: 14px;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    color: #111111;
+  }
+  
+  .subtitle {
+    margin-top: 8px;
+    font-size: 16px;
+    color: #666666;
+  }

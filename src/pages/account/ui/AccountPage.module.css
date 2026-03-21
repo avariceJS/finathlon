@@ -1,0 +1,26 @@
+.page {
+    min-height: 100vh;
+  }
+  
+  .main {
+    padding: 0 0 32px;
+  }
+  
+  .workspace {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    background: #e6e6e6;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .content {
+    min-width: 0;
+    background: #ededed;
+  }
+  
+  .sectionArea {
+    min-height: 760px;
+    padding: 28px 28px 40px;
+    background: #ededed;
+  }

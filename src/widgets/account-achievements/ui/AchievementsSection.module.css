@@ -1,0 +1,17 @@
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  
+  .title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #111111;
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 240px));
+    gap: 28px 40px;
+  }

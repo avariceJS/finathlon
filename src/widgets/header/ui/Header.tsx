@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { AuthModal } from '@/features/auth/ui/AuthModal'
 import type { NavItem } from '@/pages/home/model/types'
+import { cx } from '@/shared/lib/classNames'
 import { Button } from '@/shared/ui/button/Button'
 import { Container } from '@/shared/ui/container/Container'
 import { Logo } from '@/shared/ui/logo/Logo'
@@ -10,18 +11,32 @@ import styles from './Header.module.css'
 
 type HeaderProps = {
   navigation: NavItem[]
+  hideAuthButton?: boolean
+  rightSlot?: ReactNode
 }
 
-export function Header({ navigation }: HeaderProps) {
+export function Header({
+  navigation,
+  hideAuthButton = false,
+  rightSlot,
+}: HeaderProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+
+  const showDefaultAuthButton = !hideAuthButton && !rightSlot
+  const isCenteredNavLayout = hideAuthButton && !rightSlot
 
   return (
     <>
       <header className={styles.header}>
-        <Container className={styles.inner}>
+        <Container
+          className={cx(styles.inner, isCenteredNavLayout && styles.innerNoAction)}
+        >
           <Logo />
 
-          <nav className={styles.nav} aria-label="Основная навигация">
+          <nav
+            className={cx(styles.nav, isCenteredNavLayout && styles.navCentered)}
+            aria-label="Основная навигация"
+          >
             {navigation.map((item) => (
               <a key={item.label} className={styles.navLink} href={item.href}>
                 {item.label}
@@ -29,13 +44,17 @@ export function Header({ navigation }: HeaderProps) {
             ))}
           </nav>
 
-          <Button size="sm" onClick={() => setIsAuthModalOpen(true)}>
-            Личный кабинет
-          </Button>
+          {rightSlot}
+
+          {showDefaultAuthButton ? (
+            <Button size="sm" onClick={() => setIsAuthModalOpen(true)}>
+              Личный кабинет
+            </Button>
+          ) : null}
         </Container>
       </header>
 
-      {isAuthModalOpen ? (
+      {showDefaultAuthButton && isAuthModalOpen ? (
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
