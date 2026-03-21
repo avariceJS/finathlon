@@ -1,0 +1,14 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(120, 120, 120, 0.28);
+    backdrop-filter: blur(10px);
+  }
+  
+  .content {
+    width: min(892px, 100%);
+  }
