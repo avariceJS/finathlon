@@ -1,7 +1,7 @@
 import type { AccountEvent } from '@/pages/account/model/types'
 import { EventCard } from '@/entities/account/ui/EventCard'
 
-import styles from './AccountEventsSection.module.css'
+import styles from '../styles/AccountEventsSection.module.css'
 
 type AccountEventsSectionProps = {
   events: AccountEvent[]

@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { cx } from '@/shared/lib/classNames'
 
-import styles from './FaqItem.module.css'
+import styles from '../styles/FaqItem.module.css'
 
 type FaqItemProps = {
   question: string

@@ -1,7 +1,7 @@
 import type { TimelineItem } from '@/pages/home/model/types'
 import { Section } from '@/shared/ui/section/Section'
 
-import styles from './TimelineSection.module.css'
+import styles from '../styles/TimelineSection.module.css'
 
 type TimelineSectionProps = {
   items: TimelineItem[]

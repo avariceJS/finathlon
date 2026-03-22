@@ -4,16 +4,18 @@ import { accountPageMock } from '../model/mocks'
 import type { AccountSectionKey } from '../model/types'
 
 import { Container } from '@/shared/ui/container/Container'
-import { Footer } from '@/widgets/footer/ui/Footer'
-import { Header } from '@/widgets/header/ui/Header'
-import { AchievementsSection } from '@/widgets/account-achievements/ui/AchievementsSection'
-import { AccountEventsSection } from '@/widgets/account-events/ui/AccountEventsSection'
-import { AccountProfileBanner } from '@/widgets/account-layout/ui/AccountProfileBanner'
-import { AccountSidebar } from '@/widgets/account-layout/ui/AccountSidebar'
-import { NotificationsSection } from '@/widgets/account-notifications/ui/NotificationsSection'
-import { PersonalDataSection } from '@/widgets/account-personal-data/ui/PersonalDataSection'
+import { AchievementsSection } from '@/widgets/account-achievements'
+import { AccountEventsSection } from '@/widgets/account-events'
+import {
+  AccountProfileBanner,
+  AccountSidebar,
+} from '@/widgets/account-layout'
+import { NotificationsSection } from '@/widgets/account-notifications'
+import { PersonalDataSection } from '@/widgets/account-personal-data'
+import { Footer } from '@/widgets/footer'
+import { Header } from '@/widgets/header'
 
-import styles from './AccountPage.module.css'
+import styles from '../styles/AccountPage.module.css'
 
 const VALID_SECTIONS: AccountSectionKey[] = [
   'personal',

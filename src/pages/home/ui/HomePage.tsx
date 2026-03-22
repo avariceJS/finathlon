@@ -1,16 +1,16 @@
 import { homePageMock } from '../model/mocks'
 
-import { AboutSection } from '@/widgets/about/ui/AboutSection'
-import { FaqSection } from '@/widgets/faq/ui/FaqSection'
-import { Footer } from '@/widgets/footer/ui/Footer'
-import { Header } from '@/widgets/header/ui/Header'
-import { HeroSection } from '@/widgets/hero/ui/HeroSection'
-import { NewsSection } from '@/widgets/news/ui/NewsSection'
-import { ParticipationSection } from '@/widgets/participation/ui/ParticipationSection'
-import { StatsSection } from '@/widgets/stats/ui/StatsSection'
-import { TimelineSection } from '@/widgets/timeline/ui/TimelineSection'
+import { AboutSection } from '@/widgets/about'
+import { FaqSection } from '@/widgets/faq'
+import { Footer } from '@/widgets/footer'
+import { Header } from '@/widgets/header'
+import { HeroSection } from '@/widgets/hero'
+import { NewsSection } from '@/widgets/news'
+import { ParticipationSection } from '@/widgets/participation'
+import { StatsSection } from '@/widgets/stats'
+import { TimelineSection } from '@/widgets/timeline'
 
-import styles from './HomePage.module.css'
+import styles from '../styles/HomePage.module.css'
 
 export function HomePage() {
   const data = homePageMock

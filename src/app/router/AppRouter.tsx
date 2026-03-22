@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router'
 
-import { AccountPage } from '@/pages/account/ui/AccountPage'
-import { HomePage } from '@/pages/home/ui/HomePage'
+import { AccountPage } from '@/pages/account'
+import { HomePage } from '@/pages/home'
 
 export function AppRouter() {
   return (

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { AccountField } from '@/pages/account/model/types'
 import { ProfileField } from '@/entities/account/ui/ProfileField'
 
-import styles from './PersonalDataSection.module.css'
+import styles from '../styles/PersonalDataSection.module.css'
 
 type PersonalDataSectionProps = {
   fields: AccountField[]

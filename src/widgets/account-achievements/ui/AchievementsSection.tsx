@@ -1,7 +1,7 @@
 import type { AccountAchievement } from '@/pages/account/model/types'
 import { AchievementCard } from '@/entities/account/ui/AchievementCard'
 
-import styles from './AchievementsSection.module.css'
+import styles from '../styles/AchievementsSection.module.css'
 
 type AchievementsSectionProps = {
   achievements: AccountAchievement[]

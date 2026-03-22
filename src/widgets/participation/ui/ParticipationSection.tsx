@@ -2,7 +2,7 @@ import type { ParticipationItem } from '@/pages/home/model/types'
 import { Section } from '@/shared/ui/section/Section'
 
 import { ParticipationCard } from './ParticipationCard'
-import styles from './ParticipationSection.module.css'
+import styles from '../styles/ParticipationSection.module.css'
 
 type ParticipationSectionProps = {
   items: ParticipationItem[]

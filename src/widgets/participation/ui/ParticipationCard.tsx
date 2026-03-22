@@ -1,7 +1,7 @@
 import type { ParticipationItem } from '@/pages/home/model/types'
 import { Button } from '@/shared/ui/button/Button'
 
-import styles from './ParticipationCard.module.css'
+import styles from '../styles/ParticipationCard.module.css'
 
 type ParticipationCardProps = {
   item: ParticipationItem

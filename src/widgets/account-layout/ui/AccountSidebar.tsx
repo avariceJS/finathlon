@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router'
 import type { AccountSidebarItem } from '@/pages/account/model/types'
 import { cx } from '@/shared/lib/classNames'
 
-import styles from './AccountSidebar.module.css'
+import styles from '../styles/AccountSidebar.module.css'
 
 type AccountSidebarProps = {
   items: AccountSidebarItem[]

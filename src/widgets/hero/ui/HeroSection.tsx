@@ -1,7 +1,7 @@
 import type { HeroData } from '@/pages/home/model/types'
 import { Container } from '@/shared/ui/container/Container'
 
-import styles from './HeroSection.module.css'
+import styles from '../styles/HeroSection.module.css'
 
 type HeroSectionProps = {
   hero: HeroData

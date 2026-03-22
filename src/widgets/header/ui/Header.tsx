@@ -1,19 +1,13 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 
-import { AuthModal } from '@/features/auth/ui/AuthModal'
-import type { NavItem } from '@/pages/home/model/types'
+import { AuthModal } from '@/features/AuthModal'
 import { cx } from '@/shared/lib/classNames'
 import { Button } from '@/shared/ui/button/Button'
 import { Container } from '@/shared/ui/container/Container'
 import { Logo } from '@/shared/ui/logo/Logo'
 
-import styles from './Header.module.css'
-
-type HeaderProps = {
-  navigation: NavItem[]
-  hideAuthButton?: boolean
-  rightSlot?: ReactNode
-}
+import type { HeaderProps } from '../types'
+import styles from '../styles/Header.module.css'
 
 export function Header({
   navigation,

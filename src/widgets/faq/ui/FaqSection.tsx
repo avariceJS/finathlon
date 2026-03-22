@@ -2,7 +2,7 @@ import type { FaqItem as FaqItemType } from '@/pages/home/model/types'
 import { Section } from '@/shared/ui/section/Section'
 
 import { FaqItem } from './FaqItem'
-import styles from './FaqSection.module.css'
+import styles from '../styles/FaqSection.module.css'
 
 type FaqSectionProps = {
   items: FaqItemType[]

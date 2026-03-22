@@ -1,6 +1,6 @@
 import type { NewsItem } from '@/pages/home/model/types'
 
-import styles from './NewsCard.module.css'
+import styles from '../styles/NewsCard.module.css'
 
 type NewsCardProps = {
   item: NewsItem

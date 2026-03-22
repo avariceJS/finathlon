@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { AccountNotification } from '@/pages/account/model/types'
 import { NotificationCard } from '@/entities/account/ui/NotificationCard'
 
-import styles from './NotificationsSection.module.css'
+import styles from '../styles/NotificationsSection.module.css'
 
 type NotificationsSectionProps = {
   items: AccountNotification[]

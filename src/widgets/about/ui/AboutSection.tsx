@@ -1,6 +1,6 @@
 import { Section } from '@/shared/ui/section/Section'
 
-import styles from './AboutSection.module.css'
+import styles from '../styles/AboutSection.module.css'
 
 type AboutSectionProps = {
   paragraphs: string[]

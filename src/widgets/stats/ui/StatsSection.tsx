@@ -1,7 +1,7 @@
 import type { StatItem } from '@/pages/home/model/types'
 import { Section } from '@/shared/ui/section/Section'
 
-import styles from './StatsSection.module.css'
+import styles from '../styles/StatsSection.module.css'
 
 type StatsSectionProps = {
   items: StatItem[]

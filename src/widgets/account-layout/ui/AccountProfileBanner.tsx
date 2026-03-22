@@ -1,6 +1,6 @@
 import type { AccountProfile } from '@/pages/account/model/types'
 
-import styles from './AccountProfileBanner.module.css'
+import styles from '../styles/AccountProfileBanner.module.css'
 
 type AccountProfileBannerProps = {
   profile: AccountProfile

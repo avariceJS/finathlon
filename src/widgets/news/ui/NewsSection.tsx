@@ -2,7 +2,7 @@ import type { NewsItem } from '@/pages/home/model/types'
 import { Section } from '@/shared/ui/section/Section'
 
 import { NewsCard } from './NewsCard'
-import styles from './NewsSection.module.css'
+import styles from '../styles/NewsSection.module.css'
 
 type NewsSectionProps = {
   items: NewsItem[]
