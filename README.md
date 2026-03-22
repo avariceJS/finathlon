@@ -1,5 +1,3 @@
-# Finathlon
-
 # Finathlon project for the "Project-Based Activities" course
 
 
@@ -49,3 +47,11 @@ npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
+
+### To open your personal account pages
+```sh
+http://localhost:5173/account/personal
+http://localhost:5173/account/events
+http://localhost:5173/account/achievements
+http://localhost:5173/account/notifications
+```
