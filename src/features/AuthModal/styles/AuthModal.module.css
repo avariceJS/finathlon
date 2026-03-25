@@ -1,9 +1,10 @@
 .modal {
-  width: min(892px, 100%);
+  width: min(480px, 100%);
 }
 
 .panel {
-  padding: 64px 48px 56px;
+  padding: 40px 32px;
+  width: 100%;
   border-radius: 16px;
   background: #f2f2f2;
   box-shadow: 0 24px 80px rgba(17, 17, 17, 0.16);
@@ -11,19 +12,20 @@
 
 .title {
   text-align: center;
-  font-size: clamp(36px, 4vw, 56px);
-  line-height: 1.05;
+  font-size: 32px; 
+  line-height: 1.2;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   color: #111111;
+  margin: 0;
 }
 
 .form {
-  width: min(550px, 100%);
-  margin: 56px auto 0;
+  width: 100%;
+  margin: 32px auto 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .actionButton {
@@ -31,14 +33,15 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 88px;
-  padding: 0 24px;
+  min-height: 52px;
+  padding: 0 20px;
   border: none;
-  border-radius: 20px;
+  border-radius: 12px;
   background: #d3d3d3;
   color: #111111;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 500;
+  cursor: pointer;
   transition:
     transform 0.2s ease,
     background-color 0.2s ease,
@@ -57,16 +60,17 @@
 
 .separator {
   text-align: center;
-  font-size: 32px;
+  font-size: 16px;
   line-height: 1;
   font-weight: 700;
-  color: #111111;
+  color: #7d7d7d;
+  margin: 8px 0;
 }
 
 .switchRow {
-  margin-top: 8px;
+  margin-top: 24px;
   text-align: center;
-  font-size: 20px;
+  font-size: 14px;
   color: #7d7d7d;
 }
 
@@ -75,51 +79,37 @@
 }
 
 .switchButton {
-  padding: 0;
+  padding: 0 0 0 4px;
   border: none;
   background: transparent;
   color: #7d7d7d;
-  font-size: 20px;
+  font-size: 14px;
   text-decoration: underline;
+  cursor: pointer;
 }
 
 .registerSubmitRow {
-  margin-top: clamp(40px, 10vh, 120px);
+  margin-top: 32px;
 }
 
 .error {
-  margin: -8px 0 0;
-  font-size: 14px;
+  margin: -4px 0 0;
+  font-size: 12px;
   color: #c93535;
 }
 
+/* Адаптация для мобилок */
 @media (max-width: 768px) {
   .panel {
-    padding: 40px 20px 32px;
+    padding: 32px 20px;
     border-radius: 14px;
   }
 
   .form {
-    margin-top: 32px;
-    gap: 16px;
+    margin-top: 24px;
   }
 
   .actionButton {
-    min-height: 68px;
-    border-radius: 16px;
-    font-size: 20px;
-  }
-
-  .separator {
-    font-size: 24px;
-  }
-
-  .switchRow,
-  .switchButton {
-    font-size: 18px;
-  }
-
-  .registerSubmitRow {
-    margin-top: 20px;
+    min-height: 48px;
   }
 }
