@@ -1,0 +1,186 @@
+.page {
+  min-height: 100vh;
+  background-color: #f7f7f7;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 760px; /* Чуть расширили, чтобы полям не было тесно */
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 48px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Шапка с Логотипом */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.logoImage {
+  height: 36px; /* Высота логотипа */
+  object-fit: contain;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* Центрируем заголовок */
+}
+
+.closeBtn {
+  background: #e9e9e9;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.closeBtn:hover {
+  background: #dcdcdc;
+}
+
+/* Линия-разделитель */
+.divider {
+  height: 1px;
+  background-color: #eaeaea;
+  border: none;
+  margin: 32px 0;
+  width: 100%;
+}
+
+.innerDivider {
+  grid-column: 1 / -1; 
+  height: 1px;
+  background-color: #eaeaea;
+  border: none;
+  margin: 8px 0;
+  width: 100%;
+}
+
+/* Контент шагов */
+.step h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: #111;
+}
+
+/* Сетка полей */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111;
+}
+
+/* Универсальный стиль для input, select и textarea */
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+  color: #111;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+
+.input::placeholder {
+  color: #a0a0a0;
+  font-weight: 400;
+}
+
+.input:focus {
+  border-color: #9fc7ff;
+  box-shadow: 0 0 0 4px rgba(79, 156, 249, 0.15);
+}
+
+.textarea {
+  min-height: 120px;
+  padding: 16px;
+  resize: vertical;
+}
+
+/* Подвал */
+.footer {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.legalText {
+  font-size: 12px;
+  color: #8b8b8b;
+  text-align: center;
+  line-height: 1.5;
+  max-width: 600px;
+}
+
+.legalText a {
+  color: #4f9cf9;
+  text-decoration: underline;
+}
+
+.submitBtn {
+  background: #dcdcdc;
+  color: #111;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 48px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.submitBtn:hover {
+  background: #cacaca;
+  transform: translateY(-1px);
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .container {
+    padding: 24px 20px;
+  }
+  .title {
+    position: static;
+    transform: none;
+  }
+}
