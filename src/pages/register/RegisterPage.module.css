@@ -8,7 +8,7 @@
 
 .container {
   width: 100%;
-  max-width: 760px; /* Чуть расширили, чтобы полям не было тесно */
+  max-width: 760px;
   background: #ffffff;
   border-radius: 20px;
   padding: 48px;
@@ -17,7 +17,6 @@
   flex-direction: column;
 }
 
-/* Шапка с Логотипом */
 .header {
   display: flex;
   align-items: center;
@@ -28,7 +27,7 @@
 }
 
 .logoImage {
-  height: 36px; /* Высота логотипа */
+  height: 36px; 
   object-fit: contain;
 }
 
@@ -38,7 +37,7 @@
   margin: 0;
   position: absolute;
   left: 50%;
-  transform: translateX(-50%); /* Центрируем заголовок */
+  transform: translateX(-50%); 
 }
 
 .closeBtn {
@@ -81,8 +80,12 @@
 .step h2 {
   font-size: 22px;
   font-weight: 700;
-  margin: 0 0 20px;
+  margin: 48px 0 20px;
   color: #111;
+}
+
+.step h2:first-of-type {
+  margin-top: 0;
 }
 
 /* Сетка полей */
@@ -132,7 +135,6 @@
   resize: vertical;
 }
 
-/* Подвал */
 .footer {
   margin-top: 48px;
   display: flex;
@@ -169,6 +171,64 @@
 .submitBtn:hover {
   background: #cacaca;
   transform: translateY(-1px);
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.fileUploadLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.fileUploadLabel input[type="file"] {
+  display: none; 
+}
+
+.fileText {
+  color: #a0a0a0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 85%;
+}
+
+.fileTextSelected {
+  color: #111;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+
+.checkboxRow input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #c93535; 
+}
+
+.checkboxText {
+  font-size: 15px;
+  color: #111;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.checkboxSubText {
+  display: block;
+  font-size: 13px;
+  color: #8b8b8b;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 /* Мобильная адаптация */
