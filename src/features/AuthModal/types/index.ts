@@ -7,9 +7,35 @@ export type LoginFormState = {
 
 export type RegisterFormState = {
   login: string
-  email: string
   password: string
-  passwordConfirm: string
+  lastName: string
+  firstName: string
+  middleName: string
+  email: string
+  phone: string
+  birthDate: string
+  country: string
+  federalDistrict: string
+  region: string
+  postalCode: string
+  localityType: string
+  locality: string
+  school: string
+  classCourse: string
+  orphan: string
+  ovz: string
+  schoolName: string
+  schoolAddress: string
+  schoolPhone: string
+  schoolEmail: string
+  teacherFullName: string
+  teacherPhone: string
+  teacherEmail: string
+  parentFullName: string
+  parentPhone: string
+  parentEmail: string
+  olympiadReason: string
+  financeInterest: string
 }
 
 export type AuthModalProps = {
