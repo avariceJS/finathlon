@@ -77,7 +77,7 @@ export const homePageMock: HomePageData = {
   timeline: [
     {
       id: 'forum-2025',
-      date: '21 фев',
+      date: '23 апр',
       label: 'Финатлон.Форум',
       year: '2025',
       accent: 'red',
