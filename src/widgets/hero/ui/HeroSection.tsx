@@ -16,7 +16,7 @@ export function HeroSection({ hero }: HeroSectionProps) {
         </div>
 
         <div className={styles.visual} aria-label={hero.imageAlt}>
-          <span className={styles.visualText}>Изображение</span>
+          <img src="/banner.jpg" alt="Баннер Финатлон" className={styles.bannerImage} />
         </div>
       </Container>
     </section>

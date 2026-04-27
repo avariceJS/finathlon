@@ -21,14 +21,20 @@
     letter-spacing: -0.04em;
   }
   
-  .visual {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 420px;
-    border-radius: 0;
-    background: var(--color-bg-muted);
-  }
+.visual {
+  width: 100%;
+  height: 100%;
+  background: transparent; 
+  border-radius: 20px; 
+  overflow: hidden; 
+}
+
+.bannerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; 
+  display: block;
+}
   
   .visualText {
     font-size: 40px;
