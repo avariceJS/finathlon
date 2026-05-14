@@ -1,1 +1,1 @@
-export { AccountEventsSection } from './ui/AccountEventsSection'
+export { EventsSection } from './EventsSection'

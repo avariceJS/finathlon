@@ -1,2 +1,2 @@
-export { NewsSection } from './ui/NewsSection'
-export { NewsCard } from './ui/NewsCard'
+export { NewsSection } from './NewsSection'
+export { NewsCard } from './NewsCard'

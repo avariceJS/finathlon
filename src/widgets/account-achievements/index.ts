@@ -1,1 +1,1 @@
-export { AchievementsSection } from './ui/AchievementsSection'
+export { AchievementsSection } from './AchievementsSection'

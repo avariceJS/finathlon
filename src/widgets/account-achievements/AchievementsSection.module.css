@@ -1,0 +1,114 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #475467;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  text-align: center;
+}
+
+.cardDone {
+  border-color: rgba(79, 156, 249, 0.5);
+  background: linear-gradient(180deg, #ffffff, #eef5ff);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: rgba(79, 156, 249, 0.12);
+  color: var(--color-primary, #4f9cf9);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.cardDone .icon {
+  background: linear-gradient(180deg, #4f9cf9, #2f7be0);
+  color: #ffffff;
+}
+
+.titleSm {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.description {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4f9cf9, #818cf8);
+}
+
+.progressText {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475467;
+}
+
+@media (max-width: 960px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

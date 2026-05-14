@@ -1,2 +1,1 @@
-export { Header } from './ui/Header'
-export type { HeaderProps } from './types'
+export { Header } from './Header'

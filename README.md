@@ -1,57 +1,53 @@
-# Finathlon project for the "Project-Based Activities" course
+# Финатлон
 
+Платформа для финансовых олимпиад, викторин и форума «Профессионалы будущего».
+Это fullstack-приложение на React + Vite + Supabase:
+
+- публичная часть (главная, новости, мероприятия, партнёры, документы);
+- личный кабинет пользователя с редактированием профиля и историей участия;
+- админ-панель с CRUD по всему пользовательскому контенту.
 
 ![Preview](public/preview.png)
 
+## Стек
 
+- React 19 + TypeScript + Vite
+- React Router 7
+- Supabase (Postgres + Auth + RLS)
+- CSS Modules
 
-## Stack
-
-- React  
-- TypeScript  
-- Vite  
-- React Router  
-
-
-## Quick Start
-
-Follow these steps to set up the project locally on your machine.
-
-### Prerequisites
-
-Make sure you have the following installed on your machine:
-
-- [Git](https://git-scm.com/downloads)  
-- [Node.js](https://nodejs.org/en)  
-- [npm](https://www.npmjs.com/) (Node Package Manager)  
-
-### Cloning the repository
-
-```sh
-git clone https://github.com/avariceJS/finathlon.git
-cd finathlon
-```
-
-### Installation
-
-Install the project dependencies using npm:
+## Запуск локально
 
 ```sh
 npm install
-```
-
-### Running the project
-
-```sh
+cp .env.example .env.local   # затем подставьте свои URL/anon key
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
+Откройте `http://localhost:5173`.
 
-### To open your personal account pages
-```sh
-http://localhost:5173/account/personal
-http://localhost:5173/account/events
-http://localhost:5173/account/achievements
-http://localhost:5173/account/notifications
+## Полезные пути
+
+- `/` — главная (контент из Supabase)
+- `/news`, `/news/:slug` — новости
+- `/events`, `/events/:slug` — мероприятия и таймлайн
+- `/partners` — партнёры, организаторы, попечительский совет
+- `/documents` — документы по категориям
+- `/account/personal` — личный кабинет (требует входа)
+- `/admin` — админ-панель (требует роль `admin`)
+
+## Структура
+
 ```
+src/
+├── app/                # Корень приложения, роутер
+├── pages/              # Страницы (HomePage, NewsListPage, AccountPage, AdminX...)
+├── widgets/            # Сложные UI-блоки страниц
+├── features/           # Фичи (AuthModal)
+├── entities/           # Доменные типы (NewsArticle, Profile, ...)
+└── shared/             # api, supabase client, ui-примитивы, lib, config
+```
+
+## Supabase
+
+См. [SUPABASE.md](./SUPABASE.md) для информации по схеме, RLS и применению миграций.

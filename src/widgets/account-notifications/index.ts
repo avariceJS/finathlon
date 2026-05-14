@@ -1,1 +1,1 @@
-export { NotificationsSection } from './ui/NotificationsSection'
+export { NotificationsSection } from './NotificationsSection'
