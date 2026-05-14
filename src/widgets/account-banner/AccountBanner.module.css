@@ -1,0 +1,65 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 24px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid #eef2f7;
+  border-radius: 20px;
+  flex-wrap: wrap;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #4f9cf9, #2f7be0);
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.role {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary, #4f9cf9);
+}
+
+.name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.meta {
+  font-size: 14px;
+  color: #475467;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(79, 156, 249, 0.12);
+  color: var(--color-primary, #4f9cf9);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cta:hover {
+  background: rgba(79, 156, 249, 0.18);
+}

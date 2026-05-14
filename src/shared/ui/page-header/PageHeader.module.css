@@ -1,0 +1,52 @@
+.section {
+  padding: 48px 0 24px;
+}
+
+.inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(79, 156, 249, 1);
+}
+
+.title {
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #111111;
+}
+
+.description {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 32px 0 16px;
+  }
+}

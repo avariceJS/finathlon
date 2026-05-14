@@ -1,1 +1,1 @@
-export { StatsSection } from './ui/StatsSection'
+export { StatsSection } from './StatsSection'

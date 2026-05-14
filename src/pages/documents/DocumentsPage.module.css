@@ -1,0 +1,57 @@
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  padding-bottom: 64px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.groupTitle {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cardDescription {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475467;
+  flex: 1;
+}
+
+.muted {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

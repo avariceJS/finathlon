@@ -1,1 +1,1 @@
-export { TimelineSection } from './ui/TimelineSection'
+export { TimelineSection } from './TimelineSection'
