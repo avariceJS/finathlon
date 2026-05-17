@@ -58,7 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id, isAuthLoading, loadProfile, session?.user])
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      if (error) throw error
+    } catch {
+      await supabase.auth.signOut({ scope: 'local' })
+    }
     setProfile(null)
   }, [])
 
