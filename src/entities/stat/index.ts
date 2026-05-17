@@ -1,1 +1,1 @@
-export type { StatItem, StatItemInput } from './types'
+export type { StatItem, StatItemInput, StatItemUpdate } from './types'

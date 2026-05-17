@@ -15,4 +15,9 @@ export type {
   AboutSetting,
   ContactsSetting,
 } from './site-settings'
+export {
+  DEFAULT_HERO_SETTING,
+  DEFAULT_ABOUT_SETTING,
+  DEFAULT_CONTACTS_SETTING,
+} from './site-settings'
 export type { AdminProfile } from './admin'

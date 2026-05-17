@@ -39,9 +39,6 @@ export function Footer({ contacts }: FooterProps) {
           <Link to="/documents" className={styles.link}>
             Документы
           </Link>
-          <Link to="/partners" className={styles.link}>
-            Партнёры и совет
-          </Link>
           <Link to="/account/personal" className={styles.link}>
             Личный кабинет
           </Link>
@@ -62,13 +59,13 @@ export function Footer({ contacts }: FooterProps) {
       <Container className={styles.legal}>
         <p>© {year} Финатлон. Все права защищены.</p>
         <p>
-          <a className={styles.link} href="#">
+          <Link className={styles.link} to="/privacy">
             Политика конфиденциальности
-          </a>
+          </Link>
           {' · '}
-          <a className={styles.link} href="#">
+          <Link className={styles.link} to="/terms">
             Пользовательское соглашение
-          </a>
+          </Link>
         </p>
       </Container>
     </footer>

@@ -74,16 +74,36 @@ export function AdminStatsPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (mode.kind === 'closed') return
     setIsSaving(true)
     setFormError(null)
-    const payload = {
-      metricKey: form.metricKey.trim(),
+    if (mode.kind === 'create') {
+      const result = await statsApi.createStat({
+        metricKey: form.metricKey.trim(),
+        value: form.value.trim(),
+        label: form.label.trim(),
+        sortOrder: form.sortOrder,
+        isPublished: form.isPublished,
+      })
+      setIsSaving(false)
+      if (result.error) {
+        setFormError(result.error)
+        return
+      }
+      closeModal()
+      await reload()
+      return
+    }
+    if (mode.kind !== 'edit') {
+      setIsSaving(false)
+      return
+    }
+    const result = await statsApi.updateStat(mode.stat.id, {
       value: form.value.trim(),
       label: form.label.trim(),
       sortOrder: form.sortOrder,
       isPublished: form.isPublished,
-    }
-    const result = await statsApi.upsertStat(payload)
+    })
     setIsSaving(false)
     if (result.error) {
       setFormError(result.error)

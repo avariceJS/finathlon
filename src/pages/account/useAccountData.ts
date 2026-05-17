@@ -22,12 +22,13 @@ const EMPTY: AccountData = {
 
 export function useAccountData() {
   const { user } = useAuth()
+  const userId = user?.id ?? null
   const [data, setData] = useState<AccountData>(EMPTY)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setData(EMPTY)
       setIsLoading(false)
       return
@@ -36,9 +37,9 @@ export function useAccountData() {
     setIsLoading(true)
     setError(null)
     const [eventsRes, achievementsRes, notificationsRes] = await Promise.all([
-      profileApi.listUserEvents(user.id),
-      profileApi.listUserAchievements(user.id),
-      profileApi.listUserNotifications(user.id),
+      profileApi.listUserEvents(userId),
+      profileApi.listUserAchievements(userId),
+      profileApi.listUserNotifications(userId),
     ])
     setData({
       events: eventsRes.data ?? [],
@@ -49,7 +50,7 @@ export function useAccountData() {
       eventsRes.error ?? achievementsRes.error ?? notificationsRes.error,
     )
     setIsLoading(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     void load()

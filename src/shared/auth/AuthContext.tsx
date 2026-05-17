@@ -26,6 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsProfileLoading(false)
   }, [])
 
+  const userId = session?.user?.id
+
   useEffect(() => {
     let cancelled = false
 
@@ -50,12 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isAuthLoading) return
-    if (!session?.user) {
+    if (!userId) {
       setProfile(null)
       return
     }
     void loadProfile()
-  }, [session?.user?.id, isAuthLoading, loadProfile, session?.user])
+  }, [userId, isAuthLoading, loadProfile])
 
   const signOut = useCallback(async () => {
     try {

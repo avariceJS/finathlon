@@ -171,6 +171,60 @@ export async function broadcastNotification(payload: {
   return ok({ inserted: rows.length })
 }
 
+export async function createAuthUser(payload: {
+  email: string
+  password: string
+  firstName?: string
+  lastName?: string
+}): Promise<ApiResult<{ userId: string }>> {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) {
+    return { data: null, error: 'Войдите как администратор' }
+  }
+
+  let res: Response
+  try {
+    res = await fetch('/api/admin-create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+        password: payload.password,
+        firstName: payload.firstName?.trim(),
+        lastName: payload.lastName?.trim(),
+      }),
+    })
+  } catch {
+    return {
+      data: null,
+      error:
+        'Не удалось вызвать сервер создания пользователей. Нужен деплой на Vercel и переменная SUPABASE_SERVICE_ROLE_KEY.',
+    }
+  }
+
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: string
+    userId?: string
+  }
+
+  if (!res.ok) {
+    return {
+      data: null,
+      error: json.error ?? `Ошибка сервера (${res.status})`,
+    }
+  }
+
+  if (!json.userId) {
+    return { data: null, error: 'Некорректный ответ сервера' }
+  }
+
+  return ok({ userId: json.userId })
+}
+
 export async function deleteNotification(
   id: string,
 ): Promise<ApiResult<true>> {

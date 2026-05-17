@@ -31,6 +31,9 @@ export function HeroSection({ hero }: HeroSectionProps) {
             src="/banner.jpg"
             alt=""
             className={styles.image}
+            decoding="async"
+            fetchPriority="high"
+            sizes="(max-width: 960px) 100vw, 420px"
           />
         </div>
       </Container>

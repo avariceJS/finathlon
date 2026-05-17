@@ -26,6 +26,20 @@ const EMPTY_AWARD: AwardForm = {
   progressTotal: 1,
 }
 
+type NewUserForm = {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+}
+
+const EMPTY_NEW_USER: NewUserForm = {
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+}
+
 export function AdminUsersPage() {
   const [users, setUsers] = useState<AdminProfile[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -34,6 +48,10 @@ export function AdminUsersPage() {
   const [awardForm, setAwardForm] = useState<AwardForm>(EMPTY_AWARD)
   const [awardError, setAwardError] = useState<string | null>(null)
   const [isSavingAward, setIsSavingAward] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [newUserForm, setNewUserForm] = useState<NewUserForm>(EMPTY_NEW_USER)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
 
   const reload = async () => {
     setIsLoading(true)
@@ -96,10 +114,38 @@ export function AdminUsersPage() {
     await reload()
   }
 
+  const closeCreate = () => {
+    setIsCreateOpen(false)
+    setNewUserForm(EMPTY_NEW_USER)
+    setCreateError(null)
+  }
+
+  const submitCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setIsCreating(true)
+    setCreateError(null)
+    const result = await adminApi.createAuthUser({
+      email: newUserForm.email,
+      password: newUserForm.password,
+      firstName: newUserForm.firstName,
+      lastName: newUserForm.lastName,
+    })
+    setIsCreating(false)
+    if (result.error) {
+      setCreateError(result.error)
+      return
+    }
+    closeCreate()
+    await reload()
+  }
+
   return (
     <AdminLayout
       title="Пользователи"
-      description="Просматривайте профили, управляйте ролями и выдавайте достижения."
+      description="Создавайте учётные записи, просматривайте профили, управляйте ролями и выдавайте достижения."
+      actions={
+        <Button onClick={() => setIsCreateOpen(true)}>+ Новый пользователь</Button>
+      }
     >
       {error ? (
         <Alert variant="error" title="Ошибка">
@@ -242,6 +288,60 @@ export function AdminUsersPage() {
             </Button>
             <Button type="submit" loading={isSavingAward}>
               Выдать
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isCreateOpen} onClose={closeCreate}>
+        <form className={styles.form} onSubmit={submitCreateUser}>
+          <h2 className={styles.formTitle}>Новый пользователь</h2>
+          <p className={styles.muted}>
+            Требуется Vercel и переменная окружения SUPABASE_SERVICE_ROLE_KEY.
+          </p>
+          {createError ? <Alert variant="error">{createError}</Alert> : null}
+          <div className={styles.grid2}>
+            <TextField
+              label="Имя"
+              value={newUserForm.firstName}
+              onChange={(e) =>
+                setNewUserForm((p) => ({ ...p, firstName: e.target.value }))
+              }
+            />
+            <TextField
+              label="Фамилия"
+              value={newUserForm.lastName}
+              onChange={(e) =>
+                setNewUserForm((p) => ({ ...p, lastName: e.target.value }))
+              }
+            />
+          </div>
+          <TextField
+            label="Email"
+            type="email"
+            required
+            autoComplete="off"
+            value={newUserForm.email}
+            onChange={(e) =>
+              setNewUserForm((p) => ({ ...p, email: e.target.value }))
+            }
+          />
+          <TextField
+            label="Пароль"
+            type="password"
+            required
+            autoComplete="new-password"
+            value={newUserForm.password}
+            onChange={(e) =>
+              setNewUserForm((p) => ({ ...p, password: e.target.value }))
+            }
+          />
+          <div className={styles.formActions}>
+            <Button type="button" variant="ghost" onClick={closeCreate}>
+              Отмена
+            </Button>
+            <Button type="submit" loading={isCreating}>
+              Создать
             </Button>
           </div>
         </form>

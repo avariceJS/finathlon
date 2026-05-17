@@ -14,3 +14,10 @@ export type StatItemInput = {
   sortOrder?: number
   isPublished?: boolean
 }
+
+export type StatItemUpdate = {
+  value: string
+  label: string
+  sortOrder?: number
+  isPublished?: boolean
+}
