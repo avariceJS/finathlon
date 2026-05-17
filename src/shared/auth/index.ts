@@ -4,6 +4,7 @@ export {
   signInWithCredentials,
   registerWithProfile,
   sendPasswordResetEmail,
+  requestAuthEmailChange,
   type AuthResult,
   type LoginPayload,
   type RegisterPayload,

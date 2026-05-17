@@ -23,6 +23,7 @@ function mapProfile(row: ProfileRow): Profile {
     lastName: row.last_name ?? '',
     middleName: row.middle_name ?? '',
     email: row.email ?? '',
+    username: row.username ?? '',
     phone: row.phone ?? '',
     birthDate: row.birth_date ?? '',
     country: row.country ?? '',

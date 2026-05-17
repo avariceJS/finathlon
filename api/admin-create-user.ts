@@ -1,6 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
+const LOGIN_DOMAIN = 'login.finathlon'
+
+function normalizeUsername(raw: string): string | null {
+  const s = raw.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
+  if (s.length < 3 || s.length > 32) return null
+  return s
+}
+
+function syntheticEmail(norm: string): string {
+  return `${norm}@${LOGIN_DOMAIN}`
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -50,17 +62,12 @@ export default async function handler(
       ? (JSON.parse(rawBody) as Record<string, unknown>)
       : ((rawBody ?? {}) as Record<string, unknown>)
 
-  const email = String(body.email ?? '')
-    .trim()
-    .toLowerCase()
   const password = String(body.password ?? '')
   const firstName = String(body.firstName ?? '').trim()
   const lastName = String(body.lastName ?? '').trim()
+  const kind = String(body.kind ?? 'email')
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Укажите email и пароль' })
-  }
-  if (password.length < 6) {
+  if (!password || password.length < 6) {
     return res.status(400).json({ error: 'Пароль не короче 6 символов' })
   }
 
@@ -68,15 +75,53 @@ export default async function handler(
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  let email: string
+  let meta: Record<string, string | undefined>
+
+  if (kind === 'username') {
+    const norm = normalizeUsername(String(body.username ?? ''))
+    if (!norm) {
+      return res.status(400).json({
+        error:
+          'Логин: 3–32 символа, строчные латинские буквы, цифры и знак подчёркивания',
+      })
+    }
+    const { data: exists } = await adminClient
+      .from('profiles')
+      .select('id')
+      .eq('username', norm)
+      .maybeSingle()
+    if (exists) {
+      return res.status(400).json({ error: 'Такой логин уже занят' })
+    }
+    email = syntheticEmail(norm)
+    meta = {
+      first_name: firstName || undefined,
+      last_name: lastName || undefined,
+      username: norm,
+    }
+  } else {
+    email = String(body.email ?? '')
+      .trim()
+      .toLowerCase()
+    if (!email) {
+      return res.status(400).json({ error: 'Укажите email' })
+    }
+    if (email.endsWith(`@${LOGIN_DOMAIN}`)) {
+      return res.status(400).json({ error: 'Недопустимый адрес почты' })
+    }
+    meta = {
+      first_name: firstName || undefined,
+      last_name: lastName || undefined,
+    }
+  }
+
   const { data: created, error: createErr } =
     await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: {
-        first_name: firstName || undefined,
-        last_name: lastName || undefined,
-      },
+      user_metadata: meta,
     })
 
   if (createErr) {

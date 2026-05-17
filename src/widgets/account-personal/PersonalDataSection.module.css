@@ -57,3 +57,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+.emailAttachForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e0e7ff;
+  border-radius: 18px;
+}
+
+.emailAttachTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}

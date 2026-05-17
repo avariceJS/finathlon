@@ -2,7 +2,10 @@ import { useState, type FormEvent } from 'react'
 
 import type { Profile, ProfileFormValues } from '@/entities/profile'
 import { profileApi } from '@/shared/api'
-import { useAuth } from '@/shared/auth'
+import { useAuth, requestAuthEmailChange } from '@/shared/auth'
+import { isSyntheticAuthEmail } from '@/shared/config/auth-login'
+import { todayLocalISODate } from '@/shared/lib/format'
+import { supabase } from '@/shared/supabase'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
 import { TextField } from '@/shared/ui/text-field/TextField'
@@ -67,6 +70,19 @@ function PersonalDataSectionView({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [emailChangeValue, setEmailChangeValue] = useState('')
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null)
+  const [emailChangeInfo, setEmailChangeInfo] = useState<string | null>(null)
+  const [isEmailSaving, setIsEmailSaving] = useState(false)
+
+  const displayEmail = profile?.email || email || ''
+  const needsRealEmail =
+    Boolean(profile?.username) && isSyntheticAuthEmail(displayEmail)
+
+  const pendingEmail =
+    user && typeof user === 'object' && 'new_email' in user
+      ? (user as { new_email?: string | null }).new_email ?? null
+      : null
 
   const updateField =
     (field: keyof ProfileFormValues) =>
@@ -77,6 +93,12 @@ function PersonalDataSectionView({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!user?.id) return
+    const today = todayLocalISODate()
+    if (values.birthDate && values.birthDate > today) {
+      setError('Дата рождения не может быть позже сегодняшнего дня')
+      setInfo(null)
+      return
+    }
     setError(null)
     setInfo(null)
     setIsSaving(true)
@@ -96,6 +118,25 @@ function PersonalDataSectionView({
     setIsEditing(false)
     setError(null)
     setInfo(null)
+  }
+
+  const handleEmailChangeSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setEmailChangeError(null)
+    setEmailChangeInfo(null)
+    setIsEmailSaving(true)
+    const result = await requestAuthEmailChange(emailChangeValue)
+    setIsEmailSaving(false)
+    if (result.error) {
+      setEmailChangeError(result.error)
+      return
+    }
+    setEmailChangeInfo(
+      'Проверьте почту и перейдите по ссылке, чтобы подтвердить адрес.',
+    )
+    setEmailChangeValue('')
+    await supabase.auth.refreshSession()
+    await refreshProfile()
   }
 
   return (
@@ -140,9 +181,43 @@ function PersonalDataSectionView({
       {info ? <Alert variant="success">{info}</Alert> : null}
       {!profile?.isComplete && !isEditing ? (
         <Alert variant="warning" title="Профиль заполнен не до конца">
-          Заполните имя, фамилию, город, телефон и дату рождения, чтобы открыть
-          участие в мероприятиях.
+          Заполните имя, фамилию, город, телефон и дату рождения.
+          {profile?.username
+            ? ' Учётная запись выдана по логину — укажите и подтвердите настоящую почту ниже.'
+            : null}
         </Alert>
+      ) : null}
+
+      {needsRealEmail ? (
+        <form
+          className={styles.emailAttachForm}
+          onSubmit={handleEmailChangeSubmit}
+        >
+          <h3 className={styles.emailAttachTitle}>Настоящая почта</h3>
+          {emailChangeError ? (
+            <Alert variant="error">{emailChangeError}</Alert>
+          ) : null}
+          {emailChangeInfo ? (
+            <Alert variant="success">{emailChangeInfo}</Alert>
+          ) : null}
+          {pendingEmail ? (
+            <Alert variant="info" title="Ожидается подтверждение">
+              {pendingEmail}
+            </Alert>
+          ) : null}
+          <TextField
+            label="Ваш email"
+            type="email"
+            required
+            autoComplete="email"
+            value={emailChangeValue}
+            onChange={(e) => setEmailChangeValue(e.target.value)}
+            hint="После сохранения откройте письмо и подтвердите адрес."
+          />
+          <Button type="submit" loading={isEmailSaving}>
+            Отправить письмо
+          </Button>
+        </form>
       ) : null}
 
       <form id="profile-form" className={styles.form} onSubmit={handleSubmit}>
@@ -169,12 +244,30 @@ function PersonalDataSectionView({
             autoComplete="additional-name"
           />
 
-          <TextField
-            label="Email"
-            value={profile?.email || email || ''}
-            disabled
-            hint="Изменение email пока недоступно"
-          />
+          {profile?.username ? (
+            <TextField
+              label="Логин"
+              value={profile.username}
+              disabled
+              hint="Используйте при входе вместе с паролем."
+            />
+          ) : null}
+
+          {needsRealEmail ? (
+            <TextField
+              label="Служебный email"
+              value={displayEmail}
+              disabled
+              hint="Не для переписки. Укажите личную почту в блоке выше."
+            />
+          ) : (
+            <TextField
+              label="Email"
+              value={displayEmail}
+              disabled
+              hint="Изменение email пока недоступно"
+            />
+          )}
           <TextField
             label="Телефон"
             value={values.phone}
@@ -186,6 +279,7 @@ function PersonalDataSectionView({
           <TextField
             label="Дата рождения"
             type="date"
+            max={todayLocalISODate()}
             value={values.birthDate}
             onChange={updateField('birthDate')}
             disabled={!isEditing}

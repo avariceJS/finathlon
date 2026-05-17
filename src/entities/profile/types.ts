@@ -7,6 +7,7 @@ export type Profile = {
   lastName: string
   middleName: string
   email: string
+  username: string
   phone: string
   birthDate: string
   country: string

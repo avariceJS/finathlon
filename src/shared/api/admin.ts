@@ -1,5 +1,8 @@
 import { supabase } from '@/shared/supabase'
 import type { Profile } from '@/entities/profile'
+import {
+  normalizeUsername,
+} from '@/shared/config/auth-login'
 import type {
   AchievementRow,
   NotificationRow,
@@ -21,6 +24,7 @@ function toProfile(row: ProfileRow): Profile {
     lastName: row.last_name ?? '',
     middleName: row.middle_name ?? '',
     email: row.email ?? '',
+    username: row.username ?? '',
     phone: row.phone ?? '',
     birthDate: row.birth_date ?? '',
     country: row.country ?? '',
@@ -171,17 +175,58 @@ export async function broadcastNotification(payload: {
   return ok({ inserted: rows.length })
 }
 
-export async function createAuthUser(payload: {
-  email: string
-  password: string
-  firstName?: string
-  lastName?: string
-}): Promise<ApiResult<{ userId: string }>> {
+export type CreateAuthUserPayload =
+  | {
+      kind: 'email'
+      email: string
+      password: string
+      firstName?: string
+      lastName?: string
+    }
+  | {
+      kind: 'username'
+      username: string
+      password: string
+      firstName?: string
+      lastName?: string
+    }
+
+export async function createAuthUser(
+  payload: CreateAuthUserPayload,
+): Promise<ApiResult<{ userId: string }>> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) {
     return { data: null, error: 'Войдите как администратор' }
   }
+
+  if (payload.kind === 'username') {
+    const norm = normalizeUsername(payload.username)
+    if (!norm) {
+      return {
+        data: null,
+        error:
+          'Логин: 3–32 символа, латиница, цифры и _. Будет создан служебный email вида логин@login.finathlon',
+      }
+    }
+  }
+
+  const body =
+    payload.kind === 'email'
+      ? {
+          kind: 'email' as const,
+          email: payload.email.trim().toLowerCase(),
+          password: payload.password,
+          firstName: payload.firstName?.trim(),
+          lastName: payload.lastName?.trim(),
+        }
+      : {
+          kind: 'username' as const,
+          username: payload.username.trim(),
+          password: payload.password,
+          firstName: payload.firstName?.trim(),
+          lastName: payload.lastName?.trim(),
+        }
 
   let res: Response
   try {
@@ -191,12 +236,7 @@ export async function createAuthUser(payload: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        email: payload.email.trim().toLowerCase(),
-        password: payload.password,
-        firstName: payload.firstName?.trim(),
-        lastName: payload.lastName?.trim(),
-      }),
+      body: JSON.stringify(body),
     })
   } catch {
     return {

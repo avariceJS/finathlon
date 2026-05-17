@@ -15,6 +15,7 @@ export type ProfileRow = {
   last_name: string | null
   middle_name: string | null
   email: string | null
+  username: string | null
   phone: string | null
   birth_date: string | null
   country: string | null
@@ -258,7 +259,10 @@ export type Database = {
       >
     }
     Views: Record<string, never>
-    Functions: { is_admin: { Args: { uid: string }; Returns: boolean } }
+    Functions: {
+      is_admin: { Args: { uid: string }; Returns: boolean }
+      resolve_auth_email: { Args: { p_identifier: string }; Returns: string }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

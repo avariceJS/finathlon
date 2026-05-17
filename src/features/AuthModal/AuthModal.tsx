@@ -23,7 +23,7 @@ type AuthModalProps = {
 
 type AuthMode = 'login' | 'register' | 'reset'
 
-type LoginForm = { email: string; password: string }
+type LoginForm = { loginOrEmail: string; password: string }
 type RegisterForm = {
   email: string
   password: string
@@ -32,7 +32,7 @@ type RegisterForm = {
   lastName: string
 }
 
-const EMPTY_LOGIN: LoginForm = { email: '', password: '' }
+const EMPTY_LOGIN: LoginForm = { loginOrEmail: '', password: '' }
 const EMPTY_REGISTER: RegisterForm = {
   email: '',
   password: '',
@@ -149,7 +149,7 @@ export function AuthModal({
           </h2>
           <p className={styles.subtitle}>
             {mode === 'login'
-              ? 'Войдите, чтобы попасть в личный кабинет и продолжить участие.'
+              ? 'Войдите по логину (если выдан администратором) или по email.'
               : null}
             {mode === 'register'
               ? 'Достаточно пары полей — остальное заполним в личном кабинете.'
@@ -200,13 +200,13 @@ export function AuthModal({
         {mode === 'login' ? (
           <form className={styles.form} onSubmit={handleLoginSubmit}>
             <TextField
-              label="Email"
-              type="email"
-              autoComplete="email"
+              label="Логин или email"
+              type="text"
+              autoComplete="username"
               required
-              value={loginForm.email}
+              value={loginForm.loginOrEmail}
               onChange={(e) =>
-                setLoginForm((p) => ({ ...p, email: e.target.value }))
+                setLoginForm((p) => ({ ...p, loginOrEmail: e.target.value }))
               }
             />
             <TextField

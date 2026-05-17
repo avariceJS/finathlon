@@ -26,7 +26,10 @@ const EMPTY_AWARD: AwardForm = {
   progressTotal: 1,
 }
 
+type CreateMode = 'username' | 'email'
+
 type NewUserForm = {
+  username: string
   email: string
   password: string
   firstName: string
@@ -34,6 +37,7 @@ type NewUserForm = {
 }
 
 const EMPTY_NEW_USER: NewUserForm = {
+  username: '',
   email: '',
   password: '',
   firstName: '',
@@ -49,6 +53,7 @@ export function AdminUsersPage() {
   const [awardError, setAwardError] = useState<string | null>(null)
   const [isSavingAward, setIsSavingAward] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createMode, setCreateMode] = useState<CreateMode>('username')
   const [newUserForm, setNewUserForm] = useState<NewUserForm>(EMPTY_NEW_USER)
   const [createError, setCreateError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -116,6 +121,7 @@ export function AdminUsersPage() {
 
   const closeCreate = () => {
     setIsCreateOpen(false)
+    setCreateMode('username')
     setNewUserForm(EMPTY_NEW_USER)
     setCreateError(null)
   }
@@ -124,12 +130,22 @@ export function AdminUsersPage() {
     event.preventDefault()
     setIsCreating(true)
     setCreateError(null)
-    const result = await adminApi.createAuthUser({
-      email: newUserForm.email,
-      password: newUserForm.password,
-      firstName: newUserForm.firstName,
-      lastName: newUserForm.lastName,
-    })
+    const result =
+      createMode === 'username'
+        ? await adminApi.createAuthUser({
+            kind: 'username',
+            username: newUserForm.username,
+            password: newUserForm.password,
+            firstName: newUserForm.firstName,
+            lastName: newUserForm.lastName,
+          })
+        : await adminApi.createAuthUser({
+            kind: 'email',
+            email: newUserForm.email,
+            password: newUserForm.password,
+            firstName: newUserForm.firstName,
+            lastName: newUserForm.lastName,
+          })
     setIsCreating(false)
     if (result.error) {
       setCreateError(result.error)
@@ -170,7 +186,15 @@ export function AdminUsersPage() {
                       .filter(Boolean)
                       .join(' ') || item.email || item.id}
                   </strong>
-                  <div className={styles.muted}>{item.email}</div>
+                  <div className={styles.muted}>
+                    {item.username ? (
+                      <>
+                        Логин: {item.username}
+                        <br />
+                      </>
+                    ) : null}
+                    {item.email}
+                  </div>
                 </div>
               ),
             },
@@ -300,6 +324,30 @@ export function AdminUsersPage() {
             Требуется Vercel и переменная окружения SUPABASE_SERVICE_ROLE_KEY.
           </p>
           {createError ? <Alert variant="error">{createError}</Alert> : null}
+          <div className={styles.createModeSwitch}>
+            <Button
+              type="button"
+              size="sm"
+              variant={createMode === 'username' ? 'secondary' : 'ghost'}
+              onClick={() => {
+                setCreateMode('username')
+                setCreateError(null)
+              }}
+            >
+              По логину
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={createMode === 'email' ? 'secondary' : 'ghost'}
+              onClick={() => {
+                setCreateMode('email')
+                setCreateError(null)
+              }}
+            >
+              По email
+            </Button>
+          </div>
           <div className={styles.grid2}>
             <TextField
               label="Имя"
@@ -316,16 +364,29 @@ export function AdminUsersPage() {
               }
             />
           </div>
-          <TextField
-            label="Email"
-            type="email"
-            required
-            autoComplete="off"
-            value={newUserForm.email}
-            onChange={(e) =>
-              setNewUserForm((p) => ({ ...p, email: e.target.value }))
-            }
-          />
+          {createMode === 'username' ? (
+            <TextField
+              label="Логин"
+              required
+              autoComplete="off"
+              hint="3–32 символа: a–z, 0–9, _. Вход без личной почты."
+              value={newUserForm.username}
+              onChange={(e) =>
+                setNewUserForm((p) => ({ ...p, username: e.target.value }))
+              }
+            />
+          ) : (
+            <TextField
+              label="Email"
+              type="email"
+              required
+              autoComplete="off"
+              value={newUserForm.email}
+              onChange={(e) =>
+                setNewUserForm((p) => ({ ...p, email: e.target.value }))
+              }
+            />
+          )}
           <TextField
             label="Пароль"
             type="password"

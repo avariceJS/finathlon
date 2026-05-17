@@ -54,6 +54,13 @@
   justify-content: flex-end;
 }
 
+.createModeSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
 .form {
   display: flex;
   flex-direction: column;

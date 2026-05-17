@@ -20,4 +20,4 @@ export {
   DEFAULT_ABOUT_SETTING,
   DEFAULT_CONTACTS_SETTING,
 } from './site-settings'
-export type { AdminProfile } from './admin'
+export type { AdminProfile, CreateAuthUserPayload } from './admin'

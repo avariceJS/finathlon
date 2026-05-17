@@ -1,11 +1,12 @@
 import { supabase } from '@/shared/supabase'
+import { AUTH_LOGIN_EMAIL_DOMAIN } from '@/shared/config/auth-login'
 
 export type AuthResult = {
   error: string | null
 }
 
 export type LoginPayload = {
-  email: string
+  loginOrEmail: string
   password: string
 }
 
@@ -16,11 +17,38 @@ export type RegisterPayload = {
   lastName: string
 }
 
+async function resolveLoginToEmail(
+  loginOrEmail: string,
+): Promise<{ email: string | null; error: string | null }> {
+  const trimmed = loginOrEmail.trim()
+  if (!trimmed) {
+    return { email: null, error: 'Введите логин или email' }
+  }
+  if (trimmed.includes('@')) {
+    return { email: trimmed.toLowerCase(), error: null }
+  }
+  const { data, error } = await supabase.rpc('resolve_auth_email', {
+    p_identifier: trimmed,
+  })
+  if (error) return { email: null, error: humanizeAuthError(error.message) }
+  const email = typeof data === 'string' && data !== '' ? data : null
+  if (!email) {
+    return { email: null, error: 'Пользователь с таким логином не найден' }
+  }
+  return { email, error: null }
+}
+
 export async function signInWithCredentials(
   payload: LoginPayload,
 ): Promise<AuthResult> {
+  const { email, error: resolveErr } = await resolveLoginToEmail(
+    payload.loginOrEmail,
+  )
+  if (resolveErr) return { error: resolveErr }
+  if (!email) return { error: 'Введите логин или email' }
+
   const { error } = await supabase.auth.signInWithPassword({
-    email: payload.email.trim().toLowerCase(),
+    email,
     password: payload.password,
   })
   if (error) return { error: humanizeAuthError(error.message) }
@@ -32,9 +60,17 @@ export async function registerWithProfile(
 ): Promise<AuthResult> {
   const firstName = payload.firstName.trim()
   const lastName = payload.lastName.trim()
+  const emailLower = payload.email.trim().toLowerCase()
+
+  if (emailLower.endsWith(`@${AUTH_LOGIN_EMAIL_DOMAIN}`)) {
+    return {
+      error:
+        'Этот домен зарезервирован для выдаваемых администратором учётных записей. Укажите свою почту.',
+    }
+  }
 
   const { data, error } = await supabase.auth.signUp({
-    email: payload.email.trim().toLowerCase(),
+    email: emailLower,
     password: payload.password,
     options: {
       data: { first_name: firstName, last_name: lastName },
@@ -49,6 +85,22 @@ export async function registerWithProfile(
     }
   }
 
+  return { error: null }
+}
+
+export async function requestAuthEmailChange(
+  email: string,
+): Promise<AuthResult> {
+  const next = email.trim().toLowerCase()
+  if (!next.includes('@')) {
+    return { error: 'Введите корректный email' }
+  }
+  if (next.endsWith(`@${AUTH_LOGIN_EMAIL_DOMAIN}`)) {
+    return { error: 'Укажите настоящий адрес почты' }
+  }
+
+  const { error } = await supabase.auth.updateUser({ email: next })
+  if (error) return { error: humanizeAuthError(error.message) }
   return { error: null }
 }
 
@@ -71,7 +123,7 @@ export async function sendPasswordResetEmail(
 function humanizeAuthError(message: string): string {
   const lower = message.toLowerCase()
   if (lower.includes('invalid login credentials')) {
-    return 'Неверная почта или пароль'
+    return 'Неверный логин, почта или пароль'
   }
   if (lower.includes('user already registered')) {
     return 'Пользователь с такой почтой уже зарегистрирован'
