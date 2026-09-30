@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
+import {
+  captureRecoveryFromUrl,
+  markPasswordRecovery,
+} from '@/shared/auth/recovery'
+
 import type { Database } from './types'
 
 const url = import.meta.env.VITE_SUPABASE_URL
@@ -17,4 +22,10 @@ export const supabase = createClient<Database>(url, key, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
+})
+
+captureRecoveryFromUrl()
+
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'PASSWORD_RECOVERY') markPasswordRecovery()
 })

@@ -135,7 +135,9 @@ export function AuthModal({
       setError(result.error)
       return
     }
-    setInfo('Письмо отправлено. Проверьте почту, чтобы сбросить пароль.')
+    setInfo(
+      'Письмо отправлено. Перейдите по ссылке из письма и задайте новый пароль.',
+    )
   }
 
   return (

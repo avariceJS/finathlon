@@ -1,5 +1,12 @@
+import { PasswordRecoveryRedirect } from '@/shared/auth'
+
 import { AppRouter } from './router/AppRouter'
 
 export default function App() {
-  return <AppRouter />
+  return (
+    <>
+      <PasswordRecoveryRedirect />
+      <AppRouter />
+    </>
+  )
 }

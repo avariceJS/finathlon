@@ -262,6 +262,10 @@ export type Database = {
     Functions: {
       is_admin: { Args: { uid: string }; Returns: boolean }
       resolve_auth_email: { Args: { p_identifier: string }; Returns: string }
+      release_orphan_auth_email: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

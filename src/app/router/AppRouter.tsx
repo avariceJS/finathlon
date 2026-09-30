@@ -15,7 +15,7 @@ import {
   AdminTimelinePage,
   AdminUsersPage,
 } from '@/pages/admin'
-import { AuthPage } from '@/pages/auth'
+import { AuthPage, ResetPasswordPage } from '@/pages/auth'
 import { DocumentsPage } from '@/pages/documents'
 import { EventsPage } from '@/pages/events'
 import { HomePage } from '@/pages/home'
@@ -42,6 +42,7 @@ export function AppRouter() {
       <Route path="/terms" element={<TermsPage />} />
 
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
       <Route
         path="/account"

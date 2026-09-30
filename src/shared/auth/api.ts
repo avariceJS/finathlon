@@ -55,6 +55,47 @@ export async function signInWithCredentials(
   return { error: null }
 }
 
+type SignUpUser = {
+  identities?: { id: string }[] | null
+} | null
+
+function emailIsTaken(
+  error: { message: string } | null,
+  user: SignUpUser,
+): boolean {
+  if (error) {
+    const lower = error.message.toLowerCase()
+    if (
+      lower.includes('already registered') ||
+      lower.includes('already been registered') ||
+      lower.includes('already exists')
+    ) {
+      return true
+    }
+  }
+  return Boolean(
+    user && Array.isArray(user.identities) && user.identities.length === 0,
+  )
+}
+
+async function signUpNewUser(payload: {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+}) {
+  return supabase.auth.signUp({
+    email: payload.email,
+    password: payload.password,
+    options: {
+      data: {
+        first_name: payload.firstName,
+        last_name: payload.lastName,
+      },
+    },
+  })
+}
+
 export async function registerWithProfile(
   payload: RegisterPayload,
 ): Promise<AuthResult> {
@@ -69,15 +110,39 @@ export async function registerWithProfile(
     }
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email: emailLower,
-    password: payload.password,
-    options: {
-      data: { first_name: firstName, last_name: lastName },
-    },
-  })
+  const attempt = () =>
+    signUpNewUser({
+      email: emailLower,
+      password: payload.password,
+      firstName,
+      lastName,
+    })
+
+  let { data, error } = await attempt()
+
+  if (emailIsTaken(error, data.user)) {
+    const { data: released, error: releaseError } = await supabase.rpc(
+      'release_orphan_auth_email',
+      { p_email: emailLower },
+    )
+    if (releaseError) {
+      return {
+        error:
+          'Почта ещё занята удалённой учётной записью. Выполните в Supabase новую SQL-миграцию и повторите регистрацию.',
+      }
+    }
+    if (released !== true) {
+      return { error: 'Пользователь с такой почтой уже зарегистрирован' }
+    }
+    const retry = await attempt()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) return { error: humanizeAuthError(error.message) }
+  if (emailIsTaken(null, data.user)) {
+    return { error: 'Пользователь с такой почтой уже зарегистрирован' }
+  }
   if (!data.user) {
     return {
       error:
@@ -104,6 +169,24 @@ export async function requestAuthEmailChange(
   return { error: null }
 }
 
+export async function updatePassword(password: string): Promise<AuthResult> {
+  if (password.length < 6) {
+    return { error: 'Пароль должен быть не короче 6 символов' }
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession()
+  if (!sessionData.session) {
+    return {
+      error:
+        'Ссылка для сброса недействительна или устарела. Запросите письмо ещё раз.',
+    }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) return { error: humanizeAuthError(error.message) }
+  return { error: null }
+}
+
 export async function sendPasswordResetEmail(
   email: string,
 ): Promise<AuthResult> {
@@ -125,8 +208,25 @@ function humanizeAuthError(message: string): string {
   if (lower.includes('invalid login credentials')) {
     return 'Неверный логин, почта или пароль'
   }
-  if (lower.includes('user already registered')) {
+  if (
+    lower.includes('already registered') ||
+    lower.includes('already been registered') ||
+    lower.includes('user already exists')
+  ) {
     return 'Пользователь с такой почтой уже зарегистрирован'
+  }
+  if (
+    lower.includes('different from the old') ||
+    lower.includes('should be different')
+  ) {
+    return 'Новый пароль должен отличаться от текущего'
+  }
+  if (
+    lower.includes('auth session missing') ||
+    lower.includes('session expired') ||
+    (lower.includes('invalid') && lower.includes('token'))
+  ) {
+    return 'Ссылка для сброса недействительна или устарела. Запросите письмо ещё раз.'
   }
   if (lower.includes('password should be at least')) {
     return 'Пароль должен быть не короче 6 символов'

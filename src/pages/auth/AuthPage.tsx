@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 
 import { AuthModal } from '@/features/AuthModal'
-import { useAuth } from '@/shared/auth'
+import { hasPasswordRecovery, useAuth } from '@/shared/auth'
 import { Spinner } from '@/shared/ui/spinner/Spinner'
 
 export function AuthPage() {
@@ -14,6 +14,10 @@ export function AuthPage() {
   const next = searchParams.get('next') ?? '/account/personal'
 
   useEffect(() => {
+    if (hasPasswordRecovery()) {
+      navigate('/auth/reset-password', { replace: true })
+      return
+    }
     if (!isAuthLoading && user) {
       navigate(next, { replace: true })
     }
