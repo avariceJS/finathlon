@@ -9,6 +9,8 @@ export * as faqsApi from './faqs'
 export * as profileApi from './profile'
 export * as adminApi from './admin'
 export * as siteSettingsApi from './site-settings'
+export * as olympiadsApi from './olympiads'
+export * as olympiadProfilesApi from './olympiad-profiles'
 export type { ApiResult } from './utils'
 export type {
   HeroSetting,

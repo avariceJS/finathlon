@@ -32,5 +32,7 @@ export const ADMIN_NAVIGATION = [
   { label: 'Статистика', to: '/admin/stats' },
   { label: 'Уведомления', to: '/admin/notifications' },
   { label: 'Пользователи', to: '/admin/users' },
+  { label: 'Олимпиады и профили', to: '/admin/olympiads' },
+  { label: 'Профили олимпиад', to: '/admin/olympiad-profiles' },
   { label: 'Контент сайта', to: '/admin/settings' },
 ]

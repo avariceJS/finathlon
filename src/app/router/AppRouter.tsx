@@ -8,6 +8,8 @@ import {
   AdminFaqsPage,
   AdminNewsPage,
   AdminNotificationsPage,
+  AdminOlympiadProfilesPage,
+  AdminOlympiadsPage,
   AdminPartnersPage,
   AdminProgramsPage,
   AdminSettingsPage,
@@ -37,7 +39,9 @@ export function AppRouter() {
       <Route path="/events/:slug" element={<EventsPage />} />
 
       <Route path="/partners" element={<PartnersPage />} />
+
       <Route path="/documents" element={<DocumentsPage />} />
+
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
 
@@ -48,6 +52,7 @@ export function AppRouter() {
         path="/account"
         element={<Navigate to="/account/personal" replace />}
       />
+
       <Route
         path="/account/:section"
         element={
@@ -78,6 +83,22 @@ export function AppRouter() {
         element={
           <AdminRoute>
             <AdminProgramsPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/olympiads"
+        element={
+          <AdminRoute>
+            <AdminOlympiadsPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/olympiad-profiles"
+        element={
+          <AdminRoute>
+            <AdminOlympiadProfilesPage />
           </AdminRoute>
         }
       />

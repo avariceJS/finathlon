@@ -17,4 +17,6 @@ export type {
   DocumentRow,
   FaqRow,
   SiteSettingRow,
+  OlympiadRow,
+  OlympiadProfileRow,
 } from './types'
