@@ -46,18 +46,36 @@ behavior, not a real Supabase signup or live administrative workflow.
 in development tooling (including the Vercel type/tool dependency chain); the suggested
 forced changes include incompatible major changes. These are not declared resolved.
 
-## Production and remaining work
+## Production verification
 
-Live read-only schema probe confirmed that `olympiads` exists but `format` does not.
-The Supabase CLI initially had no account access. Until the forward migration is
-applied, both new admin pages disable writes and display a read-only notice. Public
-reads support the original schema. Column readiness is not proof that the security
-trigger/RLS migration was applied; only the database readback can establish that.
+The effective production backend was verified from the deployed JavaScript at
+`https://finathlon.vercel.app`: project `obwmhbpkkcxaimmbfogg` (owner's `finathlon`).
+The ZIP contains a different project's configuration (`frdrbtuyrronizwobrmi`);
+it was not used as production authority and no records were copied from it.
+Production initially had the three baseline migrations recorded and no olympiad tables.
 
-After Supabase login: inspect remote migration history and schema, apply only the
-reviewed additive upgrade (never the initial reset migration), then verify columns,
-policies, role trigger and unchanged record counts. NOT VALID constraints preserve
-historical invalid rows and enforce new writes; validation of old data is separate.
+After authenticated access, `db push --dry-run --skip-vault` proposed exactly the
+two new migrations. `db push --skip-vault` applied them and migration-history readback
+confirmed versions `20261109130000` and `20261117000000`. Effective columns, enabled
+role trigger and function, and publication RLS were read back. Both new tables are
+empty; no example events or participant records were published.
+
+Full-row aggregate fingerprints and counts of all 13 existing application tables
+matched before and after migration. A live permission probe used one explicit
+BEGIN/ROLLBACK transaction under `authenticated`, with matching auth.uid() for an
+ordinary user. Own-role promotion was rejected with exactly SQLSTATE 42501 and
+`Only administrators can assign roles`. The transaction was rolled back and all
+13 original fingerprints were compared again. No user or content record was changed.
+The protocol was separately reviewed before execution.
+
+The frontend retains legacy-schema compatibility and a read-only fallback for a
+missing upgrade. Column readiness alone is not proof of security policy installation;
+the explicit production readback and live rejection above establish it for this release.
+NOT VALID constraints protect new writes while retaining any historical invalid rows.
+GitHub CI on source commit `13f4203` passed clean install, build, lint, API types,
+unit/SQL tests, production dependency audit and all 16 browser scenarios. Vercel's
+preview status for the same commit succeeded. Main publication and hosting status
+must be verified separately after merge.
 
 This integration includes event/result administration and informational public cards.
 There is no automated per-olympiad enrollment or test engine in the source branches.
@@ -65,9 +83,9 @@ The public CTA honestly opens the account instead of claiming to start a test.
 
 ## Scoped lesson
 
-A successful Git merge does not establish release compatibility: here `ac3fd08`
-edited a table-creation migration, while the effective database retained the schema
-from `726d480`. Preserve forward migrations, verify the live columns, and gate writes
-until compatible. Likewise, existing own-row RLS is insufficient to protect an admin
-role column. Sources: the two commits, the live schema probe, the forward migration
-and `tests/unit/database.test.mjs`.
+A successful Git merge does not establish backend compatibility or identity: here
+`ac3fd08` edited a table-creation migration and the ZIP pointed at a different project
+than the deployed site. Verify the effective production URL and recorded migrations,
+use forward changes, and gate incompatible writes. Existing own-row RLS also does
+not protect an admin role column. Sources: the branch commits, deployed asset, remote
+migration/schema readback, forward migration and `tests/unit/database.test.mjs`.
