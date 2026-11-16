@@ -5,9 +5,11 @@ import type { NewsArticle } from '@/entities/news'
 import type { Program } from '@/entities/program'
 import type { StatItem } from '@/entities/stat'
 import type { TimelineEvent } from '@/entities/timeline'
+import type { Olympiad } from '@/entities/olympiad'
 import {
   faqsApi,
   newsApi,
+  olympiadsApi,
   programsApi,
   siteSettingsApi,
   statsApi,
@@ -31,6 +33,7 @@ export type HomePageData = {
   timeline: TimelineEvent[]
   faqs: FaqEntry[]
   news: NewsArticle[]
+  olympiads: Olympiad[]
 }
 
 type State = {
@@ -48,6 +51,7 @@ const EMPTY_DATA: HomePageData = {
   timeline: [],
   faqs: [],
   news: [],
+  olympiads: [],
 }
 
 export function useHomeData(): State {
@@ -67,6 +71,7 @@ export function useHomeData(): State {
       timelineApi.listTimeline(),
       faqsApi.listFaqs(),
       newsApi.listNews({ limit: 6 }),
+      olympiadsApi.listOlympiads({ includeUnpublished: false, noStore: true }),
     ])
       .then(
         ([
@@ -76,6 +81,7 @@ export function useHomeData(): State {
           timelineRes,
           faqsRes,
           newsRes,
+          olympiadsRes,
         ]) => {
           if (cancelled) return
           const firstError =
@@ -85,6 +91,7 @@ export function useHomeData(): State {
             timelineRes.error ??
             faqsRes.error ??
             newsRes.error ??
+            olympiadsRes.error ??
             null
 
           setState({
@@ -97,6 +104,7 @@ export function useHomeData(): State {
               timeline: timelineRes.data ?? [],
               faqs: faqsRes.data ?? [],
               news: newsRes.data ?? [],
+              olympiads: olympiadsRes.data ?? [],
             },
             isLoading: false,
             error: firstError,
