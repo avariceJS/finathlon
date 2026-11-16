@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 
-import type { OlympiadProfile, OlympiadProfileCategory, OlympiadProfileRank } from '@/entities/olympiad'
-import { olympiadProfilesApi } from '@/shared/api'
+import type {
+  Olympiad,
+  OlympiadProfile,
+  OlympiadProfileCategory,
+  OlympiadProfileRank,
+} from '@/entities/olympiad'
+import type { Profile } from '@/entities/profile'
+import { adminApi, olympiadsApi, olympiadProfilesApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
 import { Modal } from '@/shared/ui/modal/Modal'
@@ -43,7 +49,10 @@ const EMPTY: FormState = {
 }
 
 export function AdminOlympiadProfilesPage() {
+  const [olympiads, setOlympiads] = useState<Olympiad[]>([])
+  const [users, setUsers] = useState<Profile[]>([])
   const [profiles, setProfiles] = useState<OlympiadProfile[]>([])
+  const [schemaReady, setSchemaReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>({ kind: 'closed' })
@@ -54,9 +63,17 @@ export function AdminOlympiadProfilesPage() {
   const reload = async () => {
     setIsLoading(true)
     setError(null)
-    const res = await olympiadProfilesApi.listOlympiadProfiles()
+    const [res, olympiadsRes, usersRes, schema] = await Promise.all([
+      olympiadProfilesApi.listOlympiadProfiles(),
+      olympiadsApi.listOlympiads({ includeUnpublished: true }),
+      adminApi.listProfiles(),
+      olympiadsApi.checkOlympiadSchema(),
+    ])
+    setSchemaReady(!schema.error)
+    setOlympiads(olympiadsRes.data ?? [])
+    setUsers(usersRes.data ?? [])
     setProfiles(res.data ?? [])
-    setError(res.error)
+    setError(res.error ?? olympiadsRes.error ?? usersRes.error ?? schema.error)
     setIsLoading(false)
   }
 
@@ -86,10 +103,44 @@ export function AdminOlympiadProfilesPage() {
     setMode({ kind: 'edit', profile })
   }
 
-  const closeModal = () => setMode({ kind: 'closed' })
+  const closeModal = () => {
+    if (!isSaving) setMode({ kind: 'closed' })
+  }
+
+  const userLabel = (user: Profile) =>
+    [user.lastName, user.firstName].filter(Boolean).join(' ') ||
+    user.email ||
+    user.id
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isSaving || !schemaReady) return
+    if (
+      !form.userId ||
+      !form.olympiadId ||
+      !Number.isInteger(form.score) ||
+      form.score < 0 ||
+      !Number.isInteger(form.olympiadYear) ||
+      form.olympiadYear < 2000 ||
+      form.olympiadYear > 2100
+    ) {
+      setFormError(
+        'Выберите участника и олимпиаду, укажите год и неотрицательное целое число баллов',
+      )
+      return
+    }
+    for (const value of [form.diplomaUrl, form.certificateUrl]) {
+      if (!value.trim()) continue
+      try {
+        if (!['https:', 'http:'].includes(new URL(value.trim()).protocol))
+          throw new Error('scheme')
+      } catch {
+        setFormError(
+          'Ссылки на диплом и сертификат должны начинаться с https:// или http://',
+        )
+        return
+      }
+    }
     setIsSaving(true)
     setFormError(null)
     const payload = {
@@ -107,7 +158,10 @@ export function AdminOlympiadProfilesPage() {
       mode.kind === 'create'
         ? await olympiadProfilesApi.createOlympiadProfile(payload)
         : mode.kind === 'edit'
-          ? await olympiadProfilesApi.updateOlympiadProfile(mode.profile.id, payload)
+          ? await olympiadProfilesApi.updateOlympiadProfile(
+              mode.profile.id,
+              payload,
+            )
           : { error: 'Неизвестное действие' as string | null, data: null }
     setIsSaving(false)
     if (result.error) {
@@ -132,7 +186,11 @@ export function AdminOlympiadProfilesPage() {
     <AdminLayout
       title="Профили олимпиад"
       description="Управление профилями участников олимпиадных событий."
-      actions={<Button onClick={openCreate}>+ Новый профиль</Button>}
+      actions={
+        <Button onClick={openCreate} disabled={!schemaReady}>
+          + Новый профиль
+        </Button>
+      }
     >
       {error ? (
         <Alert variant="error" title="Ошибка">
@@ -150,13 +208,24 @@ export function AdminOlympiadProfilesPage() {
             {
               key: 'olympiadId',
               header: 'Олимпиада',
-              render: (item) => <div>{item.olympiadId}</div>,
+              render: (item) => (
+                <div>
+                  {olympiads.find((olympiad) => olympiad.id === item.olympiadId)
+                    ?.title ?? item.olympiadId}
+                </div>
+              ),
               width: '150px',
             },
             {
               key: 'userId',
               header: 'Пользователь',
-              render: (item) => <div>{item.userId}</div>,
+              render: (item) => (
+                <div>
+                  {users.find((user) => user.id === item.userId)
+                    ? userLabel(users.find((user) => user.id === item.userId)!)
+                    : item.userId}
+                </div>
+              ),
               width: '150px',
             },
             {
@@ -175,7 +244,9 @@ export function AdminOlympiadProfilesPage() {
                   '10-11': '10-11 классы',
                   university: 'Университет',
                 }
-                return <span>{categoryMap[item.category] ?? item.category}</span>
+                return (
+                  <span>{categoryMap[item.category] ?? item.category}</span>
+                )
               },
               width: '120px',
             },
@@ -208,6 +279,7 @@ export function AdminOlympiadProfilesPage() {
                   <Button
                     size="sm"
                     variant="ghost"
+                    disabled={!schemaReady}
                     onClick={() => openEdit(item)}
                   >
                     Редактировать
@@ -215,6 +287,7 @@ export function AdminOlympiadProfilesPage() {
                   <Button
                     size="sm"
                     variant="danger"
+                    disabled={!schemaReady}
                     onClick={() => handleDelete(item)}
                   >
                     Удалить
@@ -233,22 +306,48 @@ export function AdminOlympiadProfilesPage() {
             {mode.kind === 'create' ? 'Новый профиль' : 'Редактировать профиль'}
           </h2>
 
-          {formError ? (
-            <Alert variant="error">{formError}</Alert>
-          ) : null}
+          {formError ? <Alert variant="error">{formError}</Alert> : null}
 
           <div className={styles.grid2}>
-            <TextField
-              label="ID пользователя"
+            <Select
+              label="Участник"
               required
               value={form.userId}
-              onChange={(e) => setForm((p) => ({ ...p, userId: e.target.value }))}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  userId: event.target.value,
+                }))
+              }
+              options={[
+                { value: '', label: 'Выберите участника' },
+                ...users.map((user) => ({
+                  value: user.id,
+                  label: userLabel(user),
+                })),
+              ]}
             />
-            <TextField
-              label="ID олимпиады"
+            <Select
+              label="Олимпиада"
               required
               value={form.olympiadId}
-              onChange={(e) => setForm((p) => ({ ...p, olympiadId: e.target.value }))}
+              onChange={(event) => {
+                const olympiad = olympiads.find(
+                  (item) => item.id === event.target.value,
+                )
+                setForm((previous) => ({
+                  ...previous,
+                  olympiadId: event.target.value,
+                  olympiadYear: olympiad?.year ?? previous.olympiadYear,
+                }))
+              }}
+              options={[
+                { value: '', label: 'Выберите олимпиаду' },
+                ...olympiads.map((item) => ({
+                  value: item.id,
+                  label: item.title,
+                })),
+              ]}
             />
           </div>
 
@@ -256,11 +355,16 @@ export function AdminOlympiadProfilesPage() {
             <TextField
               label="Год олимпиады"
               type="number"
+              required
+              min={2000}
+              max={2100}
+              step={1}
               value={String(form.olympiadYear)}
               onChange={(e) =>
                 setForm((p) => ({
                   ...p,
-                  olympiadYear: Number(e.target.value) || new Date().getFullYear(),
+                  olympiadYear:
+                    Number(e.target.value) || new Date().getFullYear(),
                 }))
               }
             />
@@ -268,7 +372,10 @@ export function AdminOlympiadProfilesPage() {
               label="Категория"
               value={form.category}
               onChange={(e) =>
-                setForm((p) => ({ ...p, category: e.target.value as OlympiadProfileCategory }))
+                setForm((p) => ({
+                  ...p,
+                  category: e.target.value as OlympiadProfileCategory,
+                }))
               }
               options={[
                 { value: 'general', label: 'Общая' },
@@ -283,6 +390,9 @@ export function AdminOlympiadProfilesPage() {
             <TextField
               label="Баллы"
               type="number"
+              required
+              min={0}
+              step={1}
               value={String(form.score)}
               onChange={(e) =>
                 setForm((p) => ({ ...p, score: Number(e.target.value) || 0 }))
@@ -292,7 +402,10 @@ export function AdminOlympiadProfilesPage() {
               label="Звание"
               value={form.rank}
               onChange={(e) =>
-                setForm((p) => ({ ...p, rank: e.target.value as OlympiadProfileRank }))
+                setForm((p) => ({
+                  ...p,
+                  rank: e.target.value as OlympiadProfileRank,
+                }))
               }
               options={[
                 { value: 'participant', label: 'Участник' },
@@ -306,13 +419,19 @@ export function AdminOlympiadProfilesPage() {
           <div className={styles.grid2}>
             <TextField
               label="Ссылка на диплом"
+              type="url"
               value={form.diplomaUrl}
-              onChange={(e) => setForm((p) => ({ ...p, diplomaUrl: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, diplomaUrl: e.target.value }))
+              }
             />
             <TextField
               label="Ссылка на сертификат"
+              type="url"
               value={form.certificateUrl}
-              onChange={(e) => setForm((p) => ({ ...p, certificateUrl: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, certificateUrl: e.target.value }))
+              }
             />
           </div>
 

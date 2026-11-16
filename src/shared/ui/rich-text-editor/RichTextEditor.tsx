@@ -1,62 +1,117 @@
-import { useRef, useEffect } from 'react';
-import styles from './RichTextEditor.module.css';
+import { useEffect, useId, useRef, type ClipboardEvent } from 'react'
 
-type Props = {
-  value: string;
-  onChange: (html: string) => void;
-};
+import { sanitizeRichText } from '@/shared/lib/richText'
+import styles from './RichTextEditor.module.css'
 
-export function RichTextEditor({ value, onChange }: Props) {
-  const editorRef = useRef<HTMLDivElement>(null);
+export type RichTextEditorProps = {
+  value: string
+  onChange: (html: string) => void
+}
 
-  // Синхронизация внешнего значения с редактором (только при инициализации)
+export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
+  const labelId = useId()
+  const editorRef = useRef<HTMLDivElement>(null)
+  const emittedValue = useRef<string | null>(null)
+
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value;
+    // Do not replace the DOM after each keystroke: doing so resets the selection.
+    if (editorRef.current && value !== emittedValue.current) {
+      editorRef.current.innerHTML = sanitizeRichText(value)
+      emittedValue.current = value
     }
-  }, [value]);
+  }, [value])
 
-  const execCommand = (command: string, arg?: string) => {
-    document.execCommand(command, false, arg);
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-    }
-  };
+  const emitChange = () => {
+    if (!editorRef.current) return
+    const html = sanitizeRichText(editorRef.current.innerHTML)
+    emittedValue.current = html
+    onChange(html)
+  }
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-    }
-  };
+  const execCommand = (command: string, argument?: string) => {
+    editorRef.current?.focus()
+    document.execCommand(command, false, argument)
+    emitChange()
+  }
 
   const addLink = () => {
-    const url = prompt('Введите URL ссылки:', 'https://');
-    if (url) {
-      execCommand('createLink', url);
+    const url = window.prompt('Введите URL ссылки:', 'https://')
+    if (!url) return
+    try {
+      const parsed = new URL(url)
+      if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol))
+        throw new Error('scheme')
+      execCommand('createLink', parsed.href)
+    } catch {
+      window.alert('Используйте ссылку https://, http:// или mailto:')
     }
-  };
+  }
+
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const html = event.clipboardData.getData('text/html')
+    if (html) execCommand('insertHTML', sanitizeRichText(html))
+    else execCommand('insertText', event.clipboardData.getData('text/plain'))
+  }
 
   return (
     <div className={styles.wrapper}>
-      <label className={styles.label}>Дополнительный текст</label>
-      
-      <div className={styles.toolbar}>
-        <button type="button" onClick={() => execCommand('bold')} title="Жирный"><b>Ж</b></button>
-        <button type="button" onClick={() => execCommand('italic')} title="Курсив"><i>К</i></button>
-        <button type="button" onClick={() => execCommand('underline')} title="Подчеркнутый"><u>Ч</u></button>
-        <button type="button" onClick={() => execCommand('formatBlock', 'H2')} title="Заголовок">Загаловок</button>
-        <button type="button" onClick={() => execCommand('insertUnorderedList')} title="Список">Список</button>
-        <button type="button" onClick={addLink} title="Ссылка">Ссылка</button>
+      <span id={labelId} className={styles.label}>
+        Дополнительный текст
+      </span>
+      <div
+        className={styles.toolbar}
+        role="toolbar"
+        aria-label="Форматирование текста"
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        <button
+          type="button"
+          onClick={() => execCommand('bold')}
+          aria-label="Жирный"
+        >
+          <b>Ж</b>
+        </button>
+        <button
+          type="button"
+          onClick={() => execCommand('italic')}
+          aria-label="Курсив"
+        >
+          <i>К</i>
+        </button>
+        <button
+          type="button"
+          onClick={() => execCommand('underline')}
+          aria-label="Подчёркнутый"
+        >
+          <u>Ч</u>
+        </button>
+        <button type="button" onClick={() => execCommand('formatBlock', 'H2')}>
+          Заголовок
+        </button>
+        <button
+          type="button"
+          onClick={() => execCommand('insertUnorderedList')}
+        >
+          Список
+        </button>
+        <button type="button" onClick={addLink}>
+          Ссылка
+        </button>
       </div>
-
       <div
         ref={editorRef}
         className={styles.editor}
         contentEditable
-        onInput={handleInput}
-        onBlur={handleInput}
-        style={{ minHeight: '120px' }} // Компактный размер
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-labelledby={labelId}
+        onInput={emitChange}
+        onBlur={emitChange}
+        onPaste={handlePaste}
+        onDrop={(event) => event.preventDefault()}
       />
     </div>
-  );
+  )
 }

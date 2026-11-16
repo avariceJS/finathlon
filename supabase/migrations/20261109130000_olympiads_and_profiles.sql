@@ -16,20 +16,13 @@ create table if not exists public.olympiads (
   description     text,
   season          text,
   year            int not null,
-  
-  
-  format          text not null default 'online' check (format in ('online', 'offline')),
-  
+  stage           text not null default 'qualifying' check (stage in ('qualifying', 'final', 'archive')),
   status          text not null default 'draft' check (status in ('draft', 'published', 'completed', 'archived')),
   start_date      date,
   end_date        date,
   max_participants int,
   is_published    boolean not null default true,
   rich_content    text,
-  
-  -- Добавили ручное управление регистрацией
-  registration_open boolean default null,
-  
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -125,73 +118,3 @@ drop trigger if exists olympiad_profiles_touch on public.olympiad_profiles;
 create trigger olympiad_profiles_touch
   before update on public.olympiad_profiles
   for each row execute function public.touch_olympiad_profiles_updated_at();
-
--- ============================================================================
--- Seed data: sample olympiad events
--- ============================================================================
-
-insert into public.olympiads (slug, title, profile_title, description, season, year, format, status, start_date, end_date, max_participants, is_published, rich_content, registration_open)
-values
-  (
-    'olympiad-2025-2026',
-    'Всероссийская олимпиада «Финатлон» 2025/2026',
-    'Профиль участника 2025/2026',
-    'Основная олимпиада для старшеклассников: отборочный онлайн-этап и очный финал.',
-    '2025–2026',
-    2026,
-    'online', -- формат
-    'published',
-    '2025-09-01',
-    '2026-04-30',
-    1000,
-    true,
-    null,
-    null -- регистрация по датам
-  ),
-  (
-    'olympiad-2024-2025',
-    'Всероссийская олимпиада «Финатлон» 2024/2025',
-    'Профиль участника 2024/2025',
-    'Прошлый сезон олимпиады с отборочным и очным турами.',
-    '2024–2025',
-    2025,
-    'offline', -- формат
-    'archived',
-    '2024-09-01',
-    '2025-04-30',
-    1000,
-    true,
-    null,
-    false -- принудительно закрыта, так как архив
-  ),
-  (
-    'olympiad-2026-2027',
-    'Всероссийская олимпиада «Финатлон» 2026/2027',
-    'Профиль участника 2026/2027',
-    'Будущий сезон олимпиады, открыт для регистрации.',
-    '2026–2027',
-    2027,
-    'online', -- формат
-    'draft',
-    '2026-09-01',
-    '2027-04-30',
-    1000,
-    false,
-    null,
-    null -- регистрация по датам
-  )
-on conflict (slug) do update set
-  title       = excluded.title,
-  profile_title = excluded.profile_title,
-  description = excluded.description,
-  season      = excluded.season,
-  year        = excluded.year,
-  format      = excluded.format,
-  status      = excluded.status,
-  start_date  = excluded.start_date,
-  end_date    = excluded.end_date,
-  max_participants = excluded.max_participants,
-  is_published = excluded.is_published,
-  rich_content = excluded.rich_content,
-  registration_open = excluded.registration_open,
-  updated_at  = now();

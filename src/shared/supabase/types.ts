@@ -299,7 +299,11 @@ export type Database = {
       >
       olympiad_profiles: Tbl<
         OlympiadProfileRow,
-        Partial<OlympiadProfileRow> & { user_id: string; olympiad_id: string },
+        Partial<OlympiadProfileRow> & {
+          user_id: string
+          olympiad_id: string
+          olympiad_year: number
+        },
         Partial<OlympiadProfileRow>
       >
     }

@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 
-import type { Olympiad, OlympiadFormat, OlympiadStatus } from '@/entities/olympiad'
+import type {
+  Olympiad,
+  OlympiadFormat,
+  OlympiadStatus,
+} from '@/entities/olympiad'
 import { olympiadsApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
@@ -27,17 +31,17 @@ type FormState = {
   season: string
   description: string
   year: number
-  format: OlympiadFormat // Заменили stage на format
+  format: OlympiadFormat
   status: OlympiadStatus
   startDate: string
   endDate: string
-  maxParticipants: number
+  maxParticipants: string
   isPublished: boolean
   richContent: string
-  registrationOpen: boolean | null // Добавили для ручного управления
+  registrationOpen: boolean | null
 }
 
-const EMPTY: FormState = {
+const createEmptyForm = (): FormState => ({
   slug: '',
   title: '',
   profileTitle: '',
@@ -47,28 +51,35 @@ const EMPTY: FormState = {
   format: 'online',
   status: 'draft',
   startDate: new Date().toISOString().slice(0, 10),
-  endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-  maxParticipants: 1000,
-  isPublished: true,
+  endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10),
+  maxParticipants: '1000',
+  isPublished: false,
   richContent: '',
   registrationOpen: null,
-}
+})
 
 export function AdminOlympiadsPage() {
   const [olympiads, setOlympiads] = useState<Olympiad[]>([])
+  const [schemaReady, setSchemaReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>({ kind: 'closed' })
-  const [form, setForm] = useState<FormState>(EMPTY)
+  const [form, setForm] = useState<FormState>(createEmptyForm)
   const [isSaving, setIsSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   const reload = async () => {
     setIsLoading(true)
     setError(null)
-    const res = await olympiadsApi.listOlympiads({ includeUnpublished: true })
+    const [res, schema] = await Promise.all([
+      olympiadsApi.listOlympiads({ includeUnpublished: true }),
+      olympiadsApi.checkOlympiadSchema(),
+    ])
+    setSchemaReady(!schema.error)
     setOlympiads(res.data ?? [])
-    setError(res.error)
+    setError(res.error ?? schema.error)
     setIsLoading(false)
   }
 
@@ -77,7 +88,7 @@ export function AdminOlympiadsPage() {
   }, [])
 
   const openCreate = () => {
-    setForm(EMPTY)
+    setForm(createEmptyForm())
     setFormError(null)
     setMode({ kind: 'create' })
   }
@@ -92,9 +103,12 @@ export function AdminOlympiadsPage() {
       year: olympiad.year,
       format: olympiad.format,
       status: olympiad.status,
-      startDate: olympiad.startDate ?? new Date().toISOString().slice(0, 10),
+      startDate: olympiad.startDate ?? '',
       endDate: olympiad.endDate ?? '',
-      maxParticipants: olympiad.maxParticipants ?? 1000,
+      maxParticipants:
+        olympiad.maxParticipants === null
+          ? ''
+          : String(olympiad.maxParticipants),
       isPublished: olympiad.isPublished,
       richContent: olympiad.richContent ?? '',
       registrationOpen: olympiad.registrationOpen ?? null,
@@ -103,29 +117,45 @@ export function AdminOlympiadsPage() {
     setMode({ kind: 'edit', olympiad })
   }
 
-  const closeModal = () => setMode({ kind: 'closed' })
+  const closeModal = () => {
+    if (!isSaving) setMode({ kind: 'closed' })
+  }
 
   const validateForm = () => {
-    // 1. Проверка сезона
-    const seasonRegex = /^2\d{3}[-–—]2\d{3}$/;
-    if (form.season && !seasonRegex.test(form.season)) {
+    if (
+      !form.slug.trim() ||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug.trim())
+    ) {
+      return 'Slug должен содержать строчные латинские буквы, цифры и дефисы'
+    }
+    if (!form.title.trim()) return 'Укажите название олимпиады'
+    if (!Number.isInteger(form.year) || form.year < 2000 || form.year > 2100)
+      return 'Укажите год от 2000 до 2100'
+    if (
+      form.maxParticipants !== '' &&
+      (!Number.isInteger(Number(form.maxParticipants)) ||
+        Number(form.maxParticipants) <= 0)
+    )
+      return 'Лимит участников должен быть положительным целым числом'
+    const seasonRegex = /^2\d{3}[-–—]2\d{3}$/
+    if (form.season.trim() && !seasonRegex.test(form.season.trim())) {
       return 'Сезон должен быть в формате "2026-2027"'
     }
-    const [startYear, endYear] = form.season.split(/[-–—]/).map(Number)
+    const [startYear, endYear] = form.season.trim().split(/[-–—]/).map(Number)
     if (endYear <= startYear) {
       return 'Второй год сезона должен быть больше первого'
     }
 
-    // 2. Проверка дат
-    if (form.startDate && form.endDate && new Date(form.endDate) <= new Date(form.startDate)) {
-      return 'Дата окончания должна быть позже даты начала'
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      return 'Дата окончания не может быть раньше даты начала'
     }
     return null
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    
+    if (isSaving || !schemaReady) return
+
     const validationError = validateForm()
     if (validationError) {
       setFormError(validationError)
@@ -137,21 +167,22 @@ export function AdminOlympiadsPage() {
     const payload = {
       slug: form.slug.trim(),
       title: form.title.trim(),
-      profileTitle: form.profileTitle.trim(),
-      season: form.season,
-      description: form.description,
+      profileTitle: form.profileTitle.trim() || null,
+      season: form.season.trim() || null,
+      description: form.description.trim() || null,
       year: form.year,
       format: form.format,
       status: form.status,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      maxParticipants: form.maxParticipants,
+      startDate: form.startDate || null,
+      endDate: form.endDate || null,
+      maxParticipants:
+        form.maxParticipants === '' ? null : Number(form.maxParticipants),
       isPublished: form.isPublished,
       richContent: form.richContent,
       registrationOpen: form.registrationOpen,
     }
     const result =
-      mode.kind === 'create'
+      mode.kind === 'create' || mode.kind === 'copy'
         ? await olympiadsApi.createOlympiad(payload)
         : mode.kind === 'edit'
           ? await olympiadsApi.updateOlympiad(mode.olympiad.id, payload)
@@ -166,7 +197,12 @@ export function AdminOlympiadsPage() {
   }
 
   const handleDelete = async (olympiad: Olympiad) => {
-    if (!confirm(`Удалить олимпиаду «${olympiad.title}»?`)) return
+    if (
+      !confirm(
+        `Удалить олимпиаду «${olympiad.title}» и все связанные профили участников?`,
+      )
+    )
+      return
     const res = await olympiadsApi.deleteOlympiad(olympiad.id)
     if (res.error) {
       setError(res.error)
@@ -177,7 +213,7 @@ export function AdminOlympiadsPage() {
 
   const openCopyModal = (olympiad: Olympiad) => {
     setForm({
-      slug: '',
+      slug: `${olympiad.slug}-copy-${crypto.randomUUID().slice(0, 8)}`,
       title: olympiad.title,
       profileTitle: olympiad.profileTitle ?? '',
       season: olympiad.season ?? '',
@@ -186,8 +222,10 @@ export function AdminOlympiadsPage() {
       format: olympiad.format,
       status: 'draft',
       startDate: new Date().toISOString().slice(0, 10),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      maxParticipants: 1000,
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
+      maxParticipants: '1000',
       isPublished: false,
       richContent: olympiad.richContent ?? '',
       registrationOpen: null,
@@ -196,50 +234,15 @@ export function AdminOlympiadsPage() {
     setMode({ kind: 'copy', olympiad })
   }
 
-  const closeCopyModal = () => setMode({ kind: 'closed' })
-
-  const handleCopySubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    
-    const validationError = validateForm()
-    if (validationError) {
-      setFormError(validationError)
-      return
-    }
-
-    setIsSaving(true)
-    setFormError(null)
-    const payload = {
-      slug: form.slug.trim(),
-      title: form.title.trim(),
-      profileTitle: form.profileTitle.trim(),
-      season: form.season,
-      description: form.description,
-      year: form.year,
-      format: form.format,
-      status: 'draft' as OlympiadStatus,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      maxParticipants: form.maxParticipants,
-      isPublished: false,
-      richContent: form.richContent,
-      registrationOpen: null,
-    }
-    const result = await olympiadsApi.createOlympiad(payload)
-    setIsSaving(false)
-    if (result.error) {
-      setFormError(result.error)
-      return
-    }
-    closeCopyModal()
-    await reload()
-  }
-
   return (
     <AdminLayout
       title="Олимпиады и профили"
       description="Управление олимпиадными событиями и профилями участников."
-      actions={<Button onClick={openCreate}>+ Новая олимпиада</Button>}
+      actions={
+        <Button onClick={openCreate} disabled={!schemaReady}>
+          + Новая олимпиада
+        </Button>
+      }
     >
       {error ? (
         <Alert variant="error" title="Ошибка">
@@ -254,115 +257,122 @@ export function AdminOlympiadsPage() {
           data={olympiads}
           rowKey={(item) => item.id}
           columns={[
-              {
-                key: 'title',
-                header: 'Название олимпиады',
-                render: (item) => (
-                  <div>
-                    <strong>{item.title}</strong>
-                    <div className={styles.muted}>/{item.slug}</div>
-                  </div>
-                ),
+            {
+              key: 'title',
+              header: 'Название олимпиады',
+              render: (item) => (
+                <div>
+                  <strong>{item.title}</strong>
+                  <div className={styles.muted}>/{item.slug}</div>
+                </div>
+              ),
+            },
+            {
+              key: 'profileTitle',
+              header: 'Название профиля',
+              render: (item) => <div>{item.profileTitle || '—'}</div>,
+              width: '150px',
+            },
+            {
+              key: 'season',
+              header: 'Сезон',
+              render: (item) => <div>{item.season || '—'}</div>,
+              width: '80px',
+            },
+            {
+              key: 'year',
+              header: 'Год',
+              render: (item) => item.year,
+              width: '80px',
+            },
+            {
+              key: 'format',
+              header: 'Вид',
+              render: (item) => {
+                const formatMap: Record<string, string> = {
+                  online: 'Онлайн',
+                  offline: 'Очная',
+                }
+                return <span>{formatMap[item.format] ?? item.format}</span>
               },
-              {
-                key: 'profileTitle',
-                header: 'Название профиля',
-                render: (item) => <div>{item.profileTitle || '—'}</div>,
-                width: '150px',
+              width: '100px',
+            },
+            {
+              key: 'status',
+              header: 'Статус',
+              render: (item) => {
+                const statusMap: Record<string, string> = {
+                  draft: 'Черновик',
+                  published: 'Опубликовано',
+                  completed: 'Завершён',
+                  archived: 'Архив',
+                }
+                return (
+                  <span
+                    className={
+                      item.status === 'published'
+                        ? styles.badgeOk
+                        : styles.badgeMuted
+                    }
+                  >
+                    {statusMap[item.status] ?? item.status}
+                  </span>
+                )
               },
-              {
-                key: 'season',
-                header: 'Сезон',
-                render: (item) => <div>{item.season || '—'}</div>,
-                width: '80px',
-              },
-              {
-                key: 'year',
-                header: 'Год',
-                render: (item) => item.year,
-                width: '80px',
-              },
-              {
-                key: 'format',
-                header: 'Вид',
-                render: (item) => {
-                  const formatMap: Record<string, string> = {
-                    online: 'Онлайн',
-                    offline: 'Очная',
-                  }
-                  return <span>{formatMap[item.format] ?? item.format}</span>
-                },
-                width: '100px',
-              },
-              {
-                key: 'status',
-                header: 'Статус',
-                render: (item) => {
-                  const statusMap: Record<string, string> = {
-                    draft: 'Черновик',
-                    published: 'Опубликовано',
-                    completed: 'Завершён',
-                    archived: 'Архив',
-                  }
-                  return (
-                    <span
-                      className={
-                        item.status === 'published' ? styles.badgeOk : styles.badgeMuted
-                      }
-                    >
-                      {statusMap[item.status] ?? item.status}
-                    </span>
-                  )
-                },
-                width: '120px',
-              },
-              {
-                key: 'actions',
-                header: '',
-                align: 'right',
-                render: (item) => (
-                  <div className={styles.rowActions}>
+              width: '120px',
+            },
+            {
+              key: 'actions',
+              header: '',
+              align: 'right',
+              render: (item) => (
+                <div className={styles.rowActions}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!schemaReady}
+                    onClick={() => openEdit(item)}
+                  >
+                    Редактировать
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={!schemaReady}
+                    onClick={() => handleDelete(item)}
+                  >
+                    Удалить
+                  </Button>
+                  {item.status !== 'archived' && (
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={() => openEdit(item)}
+                      variant="secondary"
+                      disabled={!schemaReady}
+                      onClick={() => openCopyModal(item)}
                     >
-                      Редактировать
+                      Создать копию
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => handleDelete(item)}
-                    >
-                      Удалить
-                    </Button>
-                    {item.status !== 'archived' && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openCopyModal(item)}
-                      >
-                        Создать копию
-                      </Button>
-                    )}
-                  </div>
-                ),
-                width: '240px',
-              },
+                  )}
+                </div>
+              ),
+              width: '240px',
+            },
           ]}
         />
       )}
 
       {/* Модалка для создания и редактирования */}
-      <Modal isOpen={mode.kind !== 'closed' && mode.kind !== 'copy'} onClose={closeModal}>
+      <Modal isOpen={mode.kind !== 'closed'} onClose={closeModal}>
         <form className={styles.form} onSubmit={handleSubmit}>
           <h2 className={styles.formTitle}>
-            {mode.kind === 'create' ? 'Новая олимпиада' : 'Редактировать олимпиаду'}
+            {mode.kind === 'copy'
+              ? 'Создать копию олимпиады'
+              : mode.kind === 'create'
+                ? 'Новая олимпиада'
+                : 'Редактировать олимпиаду'}
           </h2>
 
-          {formError ? (
-            <Alert variant="error">{formError}</Alert>
-          ) : null}
+          {formError ? <Alert variant="error">{formError}</Alert> : null}
 
           <div className={styles.grid2}>
             <TextField
@@ -370,15 +380,15 @@ export function AdminOlympiadsPage() {
               required
               hint="Используется в URL, например 'olympiad-2026'"
               value={form.slug}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, slug: e.target.value }))
-              }
+              onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
             />
             <TextField
               label="Название олимпиады"
               required
               value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, title: e.target.value }))
+              }
             />
           </div>
 
@@ -395,7 +405,9 @@ export function AdminOlympiadsPage() {
               label="Сезон"
               hint="например '2026-2027'"
               value={form.season}
-              onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, season: e.target.value }))
+              }
             />
             <TextField
               multiline
@@ -412,6 +424,10 @@ export function AdminOlympiadsPage() {
             <TextField
               label="Год"
               type="number"
+              required
+              min={2000}
+              max={2100}
+              step={1}
               value={String(form.year)}
               onChange={(e) =>
                 setForm((p) => ({
@@ -424,7 +440,10 @@ export function AdminOlympiadsPage() {
               label="Вид олимпиады"
               value={form.format}
               onChange={(e) =>
-                setForm((p) => ({ ...p, format: e.target.value as OlympiadFormat }))
+                setForm((p) => ({
+                  ...p,
+                  format: e.target.value as OlympiadFormat,
+                }))
               }
               options={[
                 { value: 'online', label: 'Онлайн' },
@@ -435,7 +454,7 @@ export function AdminOlympiadsPage() {
 
           <div className={styles.grid2}>
             <TextField
-              label="Дата начала отборочного этапа"
+              label="Дата начала"
               type="date"
               value={form.startDate}
               onChange={(e) =>
@@ -443,7 +462,7 @@ export function AdminOlympiadsPage() {
               }
             />
             <TextField
-              label="Дата окончания отборочного этапа"
+              label="Дата окончания"
               type="date"
               value={form.endDate}
               onChange={(e) =>
@@ -455,12 +474,15 @@ export function AdminOlympiadsPage() {
           <div className={styles.grid2}>
             <TextField
               label="Макс. участников"
+              hint="Оставьте пустым, если лимита нет"
               type="number"
-              value={String(form.maxParticipants)}
+              min={1}
+              step={1}
+              value={form.maxParticipants}
               onChange={(e) =>
                 setForm((p) => ({
                   ...p,
-                  maxParticipants: Number(e.target.value) || 1000,
+                  maxParticipants: e.target.value,
                 }))
               }
             />
@@ -482,6 +504,20 @@ export function AdminOlympiadsPage() {
             />
           </div>
 
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              checked={form.isPublished}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  isPublished: event.target.checked,
+                }))
+              }
+            />
+            Показывать на сайте (при статусе «Опубликовано»)
+          </label>
+
           <Select
             label="Управление регистрацией"
             value={
@@ -492,11 +528,11 @@ export function AdminOlympiadsPage() {
                   : 'closed'
             }
             onChange={(e) => {
-              const val = e.target.value;
+              const val = e.target.value
               setForm((p) => ({
                 ...p,
                 registrationOpen: val === 'auto' ? null : val === 'open',
-              }));
+              }))
             }}
             options={[
               { value: 'auto', label: 'Автоматически (по датам)' },
@@ -515,148 +551,11 @@ export function AdminOlympiadsPage() {
               Отмена
             </Button>
             <Button type="submit" loading={isSaving}>
-              {mode.kind === 'create' ? 'Создать' : 'Сохранить'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Модалка для копирования */}
-      <Modal isOpen={mode.kind === 'copy'} onClose={closeCopyModal}>
-        <form className={styles.form} onSubmit={handleCopySubmit}>
-          <h2 className={styles.formTitle}>Создать копию олимпиады</h2>
-
-          {formError ? (
-            <Alert variant="error">{formError}</Alert>
-          ) : null}
-
-          <div className={styles.grid2}>
-            <TextField
-              label="Slug"
-              required
-              hint="Будет сгенерирован автоматически"
-              value={form.slug}
-              onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
-            />
-            <TextField
-              label="Название олимпиады"
-              required
-              value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-            />
-          </div>
-
-          <TextField
-            label="Название профиля"
-            value={form.profileTitle}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, profileTitle: e.target.value }))
-            }
-          />
-
-          <div className={styles.grid2}>
-            <TextField
-              label="Сезон"
-              hint="например '2026-2027'"
-              value={form.season}
-              onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))}
-            />
-            <TextField
-              multiline
-              label="Описание"
-              value={form.description}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, description: e.target.value }))
-              }
-              rows={3}
-            />
-          </div>
-
-          <div className={styles.grid2}>
-            <TextField
-              label="Год"
-              type="number"
-              value={String(form.year)}
-              onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  year: Number(e.target.value) || new Date().getFullYear(),
-                }))
-              }
-            />
-            <Select
-              label="Вид олимпиады"
-              value={form.format}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, format: e.target.value as OlympiadFormat }))
-              }
-              options={[
-                { value: 'online', label: 'Онлайн' },
-                { value: 'offline', label: 'Очная' },
-              ]}
-            />
-          </div>
-
-          <div className={styles.grid2}>
-            <TextField
-              label="Дата начала отборочного этапа"
-              type="date"
-              value={form.startDate}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, startDate: e.target.value }))
-              }
-            />
-            <TextField
-              label="Дата окончания отборочного этапа"
-              type="date"
-              value={form.endDate}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, endDate: e.target.value }))
-              }
-            />
-          </div>
-
-          <div className={styles.grid2}>
-            <TextField
-              label="Макс. участников"
-              type="number"
-              value={String(form.maxParticipants)}
-              onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  maxParticipants: Number(e.target.value) || 1000,
-                }))
-              }
-            />
-            <Select
-              label="Статус"
-              value={form.status}
-              onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  status: e.target.value as OlympiadStatus,
-                }))
-              }
-              options={[
-                { value: 'draft', label: 'Черновик' },
-                { value: 'published', label: 'Опубликовано' },
-                { value: 'completed', label: 'Завершён' },
-                { value: 'archived', label: 'Архив' },
-              ]}
-            />
-          </div>
-
-          <RichTextEditor
-            value={form.richContent}
-            onChange={(e) => setForm((p) => ({ ...p, richContent: e }))}
-          />
-
-          <div className={styles.formActions}>
-            <Button type="button" variant="ghost" onClick={closeCopyModal}>
-              Отмена
-            </Button>
-            <Button type="submit" loading={isSaving}>
-              Создать копию
+              {mode.kind === 'copy'
+                ? 'Создать копию'
+                : mode.kind === 'create'
+                  ? 'Создать'
+                  : 'Сохранить'}
             </Button>
           </div>
         </form>

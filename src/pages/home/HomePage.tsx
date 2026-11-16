@@ -4,7 +4,7 @@ import { Footer } from '@/widgets/footer'
 import { Header } from '@/widgets/header'
 import { HeroSection } from '@/widgets/hero'
 import { NewsSection } from '@/widgets/news'
-import { OlympiadsSection } from '../../widgets/olympiads'
+import { OlympiadsSection } from '@/widgets/olympiads'
 import { ProgramsSection } from '@/widgets/programs'
 import { StatsSection } from '@/widgets/stats'
 import { TimelineSection } from '@/widgets/timeline'
@@ -40,8 +40,8 @@ export function HomePage() {
       ) : (
         <>
           <ProgramsSection programs={data.programs} />
-          
-          <OlympiadsSection olympiads={data.olympiads} /> 
+
+          <OlympiadsSection olympiads={data.olympiads} />
 
           <StatsSection items={data.stats} />
           <TimelineSection events={data.timeline} />

@@ -40,3 +40,6 @@ coverage
 *.sw?
 test-results/
 playwright-report/
+
+# Project snapshots belong in Git history, not root ZIP archives
+/*.zip

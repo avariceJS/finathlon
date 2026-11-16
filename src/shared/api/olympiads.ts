@@ -1,10 +1,11 @@
+import { sanitizeRichText } from '@/shared/lib/richText'
 import { supabase } from '@/shared/supabase'
 import type { Olympiad, OlympiadInput } from '@/entities/olympiad'
 import type { OlympiadRow } from '@/shared/supabase'
 
 import { fail, ok, type ApiResult } from './utils'
 
-function mapOlympiad(row: OlympiadRow): Olympiad {
+function mapOlympiad(row: OlympiadRow & { stage?: string }): Olympiad {
   return {
     id: row.id,
     slug: row.slug,
@@ -13,8 +14,8 @@ function mapOlympiad(row: OlympiadRow): Olympiad {
     description: row.description,
     season: row.season,
     year: row.year,
-    format: row.format, 
-    registrationOpen: row.registration_open, 
+    format: row.format ?? (row.stage === 'final' ? 'offline' : 'online'),
+    registrationOpen: row.registration_open ?? null,
     status: row.status,
     startDate: row.start_date,
     endDate: row.end_date,
@@ -26,17 +27,30 @@ function mapOlympiad(row: OlympiadRow): Olympiad {
   }
 }
 
+// The website can be deployed before the additive database upgrade. Reads remain
+// compatible with the legacy schema; admin writes stay disabled until it is ready.
+export async function checkOlympiadSchema(): Promise<ApiResult<true>> {
+  const { error } = await supabase
+    .from('olympiads')
+    .select('format,registration_open')
+    .limit(0)
+  if (error)
+    return fail(
+      'Раздел временно доступен только для просмотра. Требуется обновление базы данных администратором проекта.',
+    )
+  return ok(true)
+}
+
 export async function listOlympiads(
-  options: { includeUnpublished?: boolean; noStore?: boolean } = {},
+  options: { includeUnpublished?: boolean } = {},
 ): Promise<ApiResult<Olympiad[]>> {
-  let query = supabase.from('olympiads').select('*').order('year', { ascending: false })
+  let query = supabase
+    .from('olympiads')
+    .select('*')
+    .order('year', { ascending: false })
 
   if (!options.includeUnpublished) {
-    query = query.eq('is_published', true)
-  }
-
-  if (options.noStore) {
-    query = query.setHeader('cache-control', 'no-store') 
+    query = query.eq('is_published', true).eq('status', 'published')
   }
 
   const { data, error } = await query
@@ -44,7 +58,9 @@ export async function listOlympiads(
   return ok((data ?? []).map(mapOlympiad))
 }
 
-export async function getOlympiad(id: string): Promise<ApiResult<Olympiad | null>> {
+export async function getOlympiad(
+  id: string,
+): Promise<ApiResult<Olympiad | null>> {
   const { data, error } = await supabase
     .from('olympiads')
     .select('*')
@@ -78,14 +94,16 @@ export async function createOlympiad(
     description: input.description ?? null,
     season: input.season ?? null,
     year: input.year,
-    format: input.format ?? 'online', 
+    format: input.format ?? 'online',
     registration_open: input.registrationOpen ?? null,
     status: input.status ?? 'draft',
     start_date: input.startDate ?? null,
     end_date: input.endDate ?? null,
     max_participants: input.maxParticipants ?? null,
-    is_published: input.isPublished ?? true,
-    rich_content: input.richContent ?? null,
+    is_published: input.isPublished ?? false,
+    rich_content: input.richContent
+      ? sanitizeRichText(input.richContent)
+      : null,
   }
 
   const { data, error } = await supabase
@@ -105,18 +123,24 @@ export async function updateOlympiad(
   const payload: Partial<OlympiadRow> = {}
   if (input.slug !== undefined) payload.slug = input.slug
   if (input.title !== undefined) payload.title = input.title
-  if (input.profileTitle !== undefined) payload.profile_title = input.profileTitle
+  if (input.profileTitle !== undefined)
+    payload.profile_title = input.profileTitle
   if (input.description !== undefined) payload.description = input.description
   if (input.season !== undefined) payload.season = input.season
   if (input.year !== undefined) payload.year = input.year
   if (input.format !== undefined) payload.format = input.format
-  if (input.registrationOpen !== undefined) payload.registration_open = input.registrationOpen
+  if (input.registrationOpen !== undefined)
+    payload.registration_open = input.registrationOpen
   if (input.status !== undefined) payload.status = input.status
   if (input.startDate !== undefined) payload.start_date = input.startDate
   if (input.endDate !== undefined) payload.end_date = input.endDate
-  if (input.maxParticipants !== undefined) payload.max_participants = input.maxParticipants
+  if (input.maxParticipants !== undefined)
+    payload.max_participants = input.maxParticipants
   if (input.isPublished !== undefined) payload.is_published = input.isPublished
-  if (input.richContent !== undefined) payload.rich_content = input.richContent
+  if (input.richContent !== undefined)
+    payload.rich_content = input.richContent
+      ? sanitizeRichText(input.richContent)
+      : null
 
   const { data, error } = await supabase
     .from('olympiads')

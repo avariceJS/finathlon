@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -17,16 +18,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const [profileOwner, setProfileOwner] = useState<string | null>(null)
+  const [isFetchingProfile, setIsFetchingProfile] = useState(false)
+  const profileRequest = useRef(0)
+  const userId = session?.user?.id ?? null
+  const currentProfile = profile?.id === userId ? profile : null
+  const isProfileLoading = Boolean(
+    userId && (isFetchingProfile || profileOwner !== userId),
+  )
 
   const loadProfile = useCallback(async () => {
-    setIsProfileLoading(true)
+    const request = ++profileRequest.current
+    if (!userId) {
+      setProfile(null)
+      setProfileOwner(null)
+      setIsFetchingProfile(false)
+      return
+    }
+    setIsFetchingProfile(true)
     const result = await profileApi.getMyProfile()
-    setProfile(result.error ? null : result.data)
-    setIsProfileLoading(false)
-  }, [])
-
-  const userId = session?.user?.id
+    if (request !== profileRequest.current) return
+    setProfile(result.error || result.data?.id !== userId ? null : result.data)
+    setProfileOwner(userId)
+    setIsFetchingProfile(false)
+  }, [userId])
 
   useEffect(() => {
     let cancelled = false
@@ -52,10 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isAuthLoading) return
-    if (!userId) {
-      setProfile(null)
-      return
-    }
     void loadProfile()
   }, [userId, isAuthLoading, loadProfile])
 
@@ -67,22 +78,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut({ scope: 'local' })
     }
     setProfile(null)
+    setProfileOwner(null)
   }, [])
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
-      profile,
+      profile: currentProfile,
       isAuthLoading,
       isProfileLoading,
-      isAdmin: profile?.role === 'admin',
+      isAdmin: currentProfile?.role === 'admin',
       signOut,
       refreshProfile: loadProfile,
     }),
     [
       session,
-      profile,
+      currentProfile,
       isAuthLoading,
       isProfileLoading,
       signOut,
