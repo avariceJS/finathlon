@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { Olympiad, OlympiadStage, OlympiadStatus } from '@/entities/olympiad'
+import type { Olympiad, OlympiadFormat, OlympiadStatus } from '@/entities/olympiad'
 import { olympiadsApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
@@ -27,29 +27,31 @@ type FormState = {
   season: string
   description: string
   year: number
-  stage: OlympiadStage
+  format: OlympiadFormat // Заменили stage на format
   status: OlympiadStatus
   startDate: string
   endDate: string
   maxParticipants: number
   isPublished: boolean
   richContent: string
+  registrationOpen: boolean | null // Добавили для ручного управления
 }
 
 const EMPTY: FormState = {
   slug: '',
   title: '',
   profileTitle: '',
-  season: new Date().getFullYear() + '–' + (new Date().getFullYear() + 1),
+  season: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
   description: '',
   year: new Date().getFullYear(),
-  stage: 'qualifying',
+  format: 'online',
   status: 'draft',
   startDate: new Date().toISOString().slice(0, 10),
   endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   maxParticipants: 1000,
   isPublished: true,
   richContent: '',
+  registrationOpen: null,
 }
 
 export function AdminOlympiadsPage() {
@@ -88,13 +90,14 @@ export function AdminOlympiadsPage() {
       season: olympiad.season ?? '',
       description: olympiad.description ?? '',
       year: olympiad.year,
-      stage: olympiad.stage,
+      format: olympiad.format,
       status: olympiad.status,
       startDate: olympiad.startDate ?? new Date().toISOString().slice(0, 10),
       endDate: olympiad.endDate ?? '',
       maxParticipants: olympiad.maxParticipants ?? 1000,
       isPublished: olympiad.isPublished,
       richContent: olympiad.richContent ?? '',
+      registrationOpen: olympiad.registrationOpen ?? null,
     })
     setFormError(null)
     setMode({ kind: 'edit', olympiad })
@@ -102,8 +105,33 @@ export function AdminOlympiadsPage() {
 
   const closeModal = () => setMode({ kind: 'closed' })
 
+  const validateForm = () => {
+    // 1. Проверка сезона
+    const seasonRegex = /^2\d{3}[-–—]2\d{3}$/;
+    if (form.season && !seasonRegex.test(form.season)) {
+      return 'Сезон должен быть в формате "2026-2027"'
+    }
+    const [startYear, endYear] = form.season.split(/[-–—]/).map(Number)
+    if (endYear <= startYear) {
+      return 'Второй год сезона должен быть больше первого'
+    }
+
+    // 2. Проверка дат
+    if (form.startDate && form.endDate && new Date(form.endDate) <= new Date(form.startDate)) {
+      return 'Дата окончания должна быть позже даты начала'
+    }
+    return null
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    
+    const validationError = validateForm()
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+
     setIsSaving(true)
     setFormError(null)
     const payload = {
@@ -113,13 +141,14 @@ export function AdminOlympiadsPage() {
       season: form.season,
       description: form.description,
       year: form.year,
-      stage: form.stage,
+      format: form.format,
       status: form.status,
       startDate: form.startDate,
       endDate: form.endDate,
       maxParticipants: form.maxParticipants,
       isPublished: form.isPublished,
       richContent: form.richContent,
+      registrationOpen: form.registrationOpen,
     }
     const result =
       mode.kind === 'create'
@@ -154,13 +183,14 @@ export function AdminOlympiadsPage() {
       season: olympiad.season ?? '',
       description: olympiad.description ?? '',
       year: olympiad.year,
-      stage: olympiad.stage,
+      format: olympiad.format,
       status: 'draft',
       startDate: new Date().toISOString().slice(0, 10),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       maxParticipants: 1000,
       isPublished: false,
       richContent: olympiad.richContent ?? '',
+      registrationOpen: null,
     })
     setFormError(null)
     setMode({ kind: 'copy', olympiad })
@@ -170,6 +200,13 @@ export function AdminOlympiadsPage() {
 
   const handleCopySubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    
+    const validationError = validateForm()
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+
     setIsSaving(true)
     setFormError(null)
     const payload = {
@@ -179,13 +216,14 @@ export function AdminOlympiadsPage() {
       season: form.season,
       description: form.description,
       year: form.year,
-      stage: form.stage,
+      format: form.format,
       status: 'draft' as OlympiadStatus,
       startDate: form.startDate,
       endDate: form.endDate,
       maxParticipants: form.maxParticipants,
       isPublished: false,
       richContent: form.richContent,
+      registrationOpen: null,
     }
     const result = await olympiadsApi.createOlympiad(payload)
     setIsSaving(false)
@@ -245,15 +283,14 @@ export function AdminOlympiadsPage() {
                 width: '80px',
               },
               {
-                key: 'stage',
-                header: 'Этап',
+                key: 'format',
+                header: 'Вид',
                 render: (item) => {
-                  const stageMap: Record<string, string> = {
-                    qualifying: 'Отборочный',
-                    final: 'Очный',
-                    archive: 'Архив',
+                  const formatMap: Record<string, string> = {
+                    online: 'Онлайн',
+                    offline: 'Очная',
                   }
-                  return <span>{stageMap[item.stage] ?? item.stage}</span>
+                  return <span>{formatMap[item.format] ?? item.format}</span>
                 },
                 width: '100px',
               },
@@ -316,6 +353,7 @@ export function AdminOlympiadsPage() {
         />
       )}
 
+      {/* Модалка для создания и редактирования */}
       <Modal isOpen={mode.kind !== 'closed' && mode.kind !== 'copy'} onClose={closeModal}>
         <form className={styles.form} onSubmit={handleSubmit}>
           <h2 className={styles.formTitle}>
@@ -355,7 +393,7 @@ export function AdminOlympiadsPage() {
           <div className={styles.grid2}>
             <TextField
               label="Сезон"
-              hint="например '2026–2027'"
+              hint="например '2026-2027'"
               value={form.season}
               onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))}
             />
@@ -383,15 +421,14 @@ export function AdminOlympiadsPage() {
               }
             />
             <Select
-              label="Этап"
-              value={form.stage}
+              label="Вид олимпиады"
+              value={form.format}
               onChange={(e) =>
-                setForm((p) => ({ ...p, stage: e.target.value as OlympiadStage }))
+                setForm((p) => ({ ...p, format: e.target.value as OlympiadFormat }))
               }
               options={[
-                { value: 'qualifying', label: 'Отборочный' },
-                { value: 'final', label: 'Очный' },
-                { value: 'archive', label: 'Архив' },
+                { value: 'online', label: 'Онлайн' },
+                { value: 'offline', label: 'Очная' },
               ]}
             />
           </div>
@@ -445,12 +482,33 @@ export function AdminOlympiadsPage() {
             />
           </div>
 
-          <div className={styles.grid2}>
-            <RichTextEditor
-              value={form.richContent}
-              onChange={(e) => setForm((p) => ({ ...p, richContent: e }))}
-            />
-          </div>
+          <Select
+            label="Управление регистрацией"
+            value={
+              form.registrationOpen === null
+                ? 'auto'
+                : form.registrationOpen
+                  ? 'open'
+                  : 'closed'
+            }
+            onChange={(e) => {
+              const val = e.target.value;
+              setForm((p) => ({
+                ...p,
+                registrationOpen: val === 'auto' ? null : val === 'open',
+              }));
+            }}
+            options={[
+              { value: 'auto', label: 'Автоматически (по датам)' },
+              { value: 'open', label: 'Принудительно открыта' },
+              { value: 'closed', label: 'Принудительно закрыта' },
+            ]}
+          />
+
+          <RichTextEditor
+            value={form.richContent}
+            onChange={(e) => setForm((p) => ({ ...p, richContent: e }))}
+          />
 
           <div className={styles.formActions}>
             <Button type="button" variant="ghost" onClick={closeModal}>
@@ -463,6 +521,7 @@ export function AdminOlympiadsPage() {
         </form>
       </Modal>
 
+      {/* Модалка для копирования */}
       <Modal isOpen={mode.kind === 'copy'} onClose={closeCopyModal}>
         <form className={styles.form} onSubmit={handleCopySubmit}>
           <h2 className={styles.formTitle}>Создать копию олимпиады</h2>
@@ -475,7 +534,7 @@ export function AdminOlympiadsPage() {
             <TextField
               label="Slug"
               required
-              hint="Бует сгенерирован автоматически"
+              hint="Будет сгенерирован автоматически"
               value={form.slug}
               onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
             />
@@ -498,7 +557,7 @@ export function AdminOlympiadsPage() {
           <div className={styles.grid2}>
             <TextField
               label="Сезон"
-              hint="например '2026–2027'"
+              hint="например '2026-2027'"
               value={form.season}
               onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))}
             />
@@ -526,15 +585,14 @@ export function AdminOlympiadsPage() {
               }
             />
             <Select
-              label="Этап"
-              value={form.stage}
+              label="Вид олимпиады"
+              value={form.format}
               onChange={(e) =>
-                setForm((p) => ({ ...p, stage: e.target.value as OlympiadStage }))
+                setForm((p) => ({ ...p, format: e.target.value as OlympiadFormat }))
               }
               options={[
-                { value: 'qualifying', label: 'Отборочный' },
-                { value: 'final', label: 'Очный' },
-                { value: 'archive', label: 'Архив' },
+                { value: 'online', label: 'Онлайн' },
+                { value: 'offline', label: 'Очная' },
               ]}
             />
           </div>

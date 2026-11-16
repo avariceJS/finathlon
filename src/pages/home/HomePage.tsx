@@ -41,7 +41,6 @@ export function HomePage() {
         <>
           <ProgramsSection programs={data.programs} />
           
-          {/* Вот наша новая секция с карточками олимпиад */}
           <OlympiadsSection olympiads={data.olympiads} /> 
 
           <StatsSection items={data.stats} />

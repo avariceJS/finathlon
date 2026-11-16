@@ -177,13 +177,14 @@ export type OlympiadRow = {
   description: string | null
   season: string | null
   year: number
-  stage: 'qualifying' | 'final' | 'archive'
+  format: 'online' | 'offline'
   status: 'draft' | 'published' | 'completed' | 'archived'
   start_date: string | null
   end_date: string | null
   max_participants: number | null
   is_published: boolean
   rich_content: string | null
+  registration_open: boolean | null
   created_at: string
   updated_at: string
 }

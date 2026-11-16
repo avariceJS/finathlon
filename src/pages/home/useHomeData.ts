@@ -71,7 +71,7 @@ export function useHomeData(): State {
       timelineApi.listTimeline(),
       faqsApi.listFaqs(),
       newsApi.listNews({ limit: 6 }),
-      olympiadsApi.listOlympiads({ includeUnpublished: false }),
+      olympiadsApi.listOlympiads({ includeUnpublished: false, noStore: true }),
     ])
       .then(
         ([

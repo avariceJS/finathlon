@@ -1,7 +1,7 @@
 export type {
   Olympiad,
   OlympiadInput,
-  OlympiadStage,
+  OlympiadFormat,
   OlympiadStatus,
   OlympiadProfile,
   OlympiadProfileInput,

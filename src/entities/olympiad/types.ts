@@ -1,4 +1,4 @@
-export type OlympiadStage = 'qualifying' | 'final' | 'archive'
+export type OlympiadFormat = 'online' | 'offline';
 
 export type OlympiadStatus = 'draft' | 'published' | 'completed' | 'archived'
 
@@ -10,7 +10,8 @@ export type Olympiad = {
   description: string | null
   season: string | null
   year: number
-  stage: OlympiadStage
+  format: OlympiadFormat; 
+  registrationOpen: boolean | null;
   status: OlympiadStatus
   startDate: string | null
   endDate: string | null
@@ -28,7 +29,8 @@ export type OlympiadInput = {
   description?: string | null
   season?: string | null
   year: number
-  stage?: OlympiadStage
+  format?: OlympiadFormat;
+  registrationOpen?: boolean | null;
   status?: OlympiadStatus
   startDate?: string | null
   endDate?: string | null

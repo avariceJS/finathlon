@@ -13,7 +13,8 @@ function mapOlympiad(row: OlympiadRow): Olympiad {
     description: row.description,
     season: row.season,
     year: row.year,
-    stage: row.stage,
+    format: row.format, 
+    registrationOpen: row.registration_open, 
     status: row.status,
     startDate: row.start_date,
     endDate: row.end_date,
@@ -26,12 +27,16 @@ function mapOlympiad(row: OlympiadRow): Olympiad {
 }
 
 export async function listOlympiads(
-  options: { includeUnpublished?: boolean } = {},
+  options: { includeUnpublished?: boolean; noStore?: boolean } = {},
 ): Promise<ApiResult<Olympiad[]>> {
   let query = supabase.from('olympiads').select('*').order('year', { ascending: false })
 
   if (!options.includeUnpublished) {
     query = query.eq('is_published', true)
+  }
+
+  if (options.noStore) {
+    query = query.setHeader('cache-control', 'no-store') 
   }
 
   const { data, error } = await query
@@ -73,7 +78,8 @@ export async function createOlympiad(
     description: input.description ?? null,
     season: input.season ?? null,
     year: input.year,
-    stage: input.stage ?? 'qualifying',
+    format: input.format ?? 'online', 
+    registration_open: input.registrationOpen ?? null,
     status: input.status ?? 'draft',
     start_date: input.startDate ?? null,
     end_date: input.endDate ?? null,
@@ -103,7 +109,8 @@ export async function updateOlympiad(
   if (input.description !== undefined) payload.description = input.description
   if (input.season !== undefined) payload.season = input.season
   if (input.year !== undefined) payload.year = input.year
-  if (input.stage !== undefined) payload.stage = input.stage
+  if (input.format !== undefined) payload.format = input.format
+  if (input.registrationOpen !== undefined) payload.registration_open = input.registrationOpen
   if (input.status !== undefined) payload.status = input.status
   if (input.startDate !== undefined) payload.start_date = input.startDate
   if (input.endDate !== undefined) payload.end_date = input.endDate

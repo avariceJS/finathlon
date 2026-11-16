@@ -16,13 +16,20 @@ create table if not exists public.olympiads (
   description     text,
   season          text,
   year            int not null,
-  stage           text not null default 'qualifying' check (stage in ('qualifying', 'final', 'archive')),
+  
+  
+  format          text not null default 'online' check (format in ('online', 'offline')),
+  
   status          text not null default 'draft' check (status in ('draft', 'published', 'completed', 'archived')),
   start_date      date,
   end_date        date,
   max_participants int,
   is_published    boolean not null default true,
   rich_content    text,
+  
+  -- Добавили ручное управление регистрацией
+  registration_open boolean default null,
+  
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -123,7 +130,7 @@ create trigger olympiad_profiles_touch
 -- Seed data: sample olympiad events
 -- ============================================================================
 
-insert into public.olympiads (slug, title, profile_title, description, season, year, stage, status, start_date, end_date, max_participants, is_published, rich_content)
+insert into public.olympiads (slug, title, profile_title, description, season, year, format, status, start_date, end_date, max_participants, is_published, rich_content, registration_open)
 values
   (
     'olympiad-2025-2026',
@@ -132,13 +139,14 @@ values
     'Основная олимпиада для старшеклассников: отборочный онлайн-этап и очный финал.',
     '2025–2026',
     2026,
-    'final',
+    'online', -- формат
     'published',
     '2025-09-01',
     '2026-04-30',
     1000,
     true,
-    null
+    null,
+    null -- регистрация по датам
   ),
   (
     'olympiad-2024-2025',
@@ -147,13 +155,14 @@ values
     'Прошлый сезон олимпиады с отборочным и очным турами.',
     '2024–2025',
     2025,
-    'archive',
+    'offline', -- формат
     'archived',
     '2024-09-01',
     '2025-04-30',
     1000,
     true,
-    null
+    null,
+    false -- принудительно закрыта, так как архив
   ),
   (
     'olympiad-2026-2027',
@@ -162,13 +171,14 @@ values
     'Будущий сезон олимпиады, открыт для регистрации.',
     '2026–2027',
     2027,
-    'qualifying',
+    'online', -- формат
     'draft',
     '2026-09-01',
     '2027-04-30',
     1000,
     false,
-    null
+    null,
+    null -- регистрация по датам
   )
 on conflict (slug) do update set
   title       = excluded.title,
@@ -176,11 +186,12 @@ on conflict (slug) do update set
   description = excluded.description,
   season      = excluded.season,
   year        = excluded.year,
-  stage       = excluded.stage,
+  format      = excluded.format,
   status      = excluded.status,
   start_date  = excluded.start_date,
   end_date    = excluded.end_date,
   max_participants = excluded.max_participants,
   is_published = excluded.is_published,
   rich_content = excluded.rich_content,
+  registration_open = excluded.registration_open,
   updated_at  = now();

@@ -5,16 +5,6 @@ interface OlympiadsSectionProps {
   olympiads: Olympiad[]
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  qualifying: 'Отборочный этап',
-  selection: 'Отборочный этап',
-  final: 'Заключительный (очный) этап',
-  onsite: 'Очный этап',
-  registration: 'Открыта регистрация',
-  archive: 'Завершена',
-  archived: 'Завершена',
-}
-
 // Безопасный разбор даты без сдвига часовых поясов
 function parseLocalDate(dateStr: string | null | undefined, isEndOfDay = false): Date | null {
   if (!dateStr) return null
@@ -37,7 +27,7 @@ export function OlympiadsSection({ olympiads }: OlympiadsSectionProps) {
 
   // Показываем ВСЕ опубликованные олимпиады (и активные, и завершенные)
   const displayList = olympiads.filter(
-    (item: any) => item.status === 'published' || item.isPublished
+    (item: any) => item.status === 'published' && item.isPublished === true
   )
 
   if (displayList.length === 0) return null
@@ -61,7 +51,7 @@ export function OlympiadsSection({ olympiads }: OlympiadsSectionProps) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', // ВЕРНУЛ КАК БЫЛО
             gap: '28px',
             alignItems: 'stretch',
           }}
@@ -71,22 +61,26 @@ export function OlympiadsSection({ olympiads }: OlympiadsSectionProps) {
             const start = parseLocalDate(item.startDate || item.start_date, false)
             const end = parseLocalDate(item.endDate || item.end_date, true)
 
-            // Проверка по датам из ТЗ
-            const isNotStarted = start ? now < start : false
-            const isEnded =
-              (end ? now > end : false) ||
-              item.stage === 'archive' ||
-              item.stage === 'archived' ||
-              item.status === 'archived'
+            // --- НОВАЯ ЛОГИКА РЕГИСТРАЦИИ ---
+            let isNotStarted = false;
+            let isEnded = false;
+            let isRegistrationOpen = false;
 
-            let statusLabel = STAGE_LABELS[item.stage] || item.stage || 'Отборочный этап'
-            if (isNotStarted) {
-              statusLabel = 'Ожидается открытие регистрации'
-            } else if (isEnded) {
-              statusLabel = 'Завершено'
+            if (item.registrationOpen === true) {
+              isRegistrationOpen = true;
+            } else if (item.registrationOpen === false) {
+              isEnded = true;
             } else {
-              statusLabel = `${STAGE_LABELS[item.stage] || 'Отборочный этап'}`
+              isNotStarted = start ? now < start : false;
+              isEnded = (end ? now > end : false) || item.status === 'archived';
+              isRegistrationOpen = !isNotStarted && !isEnded;
             }
+
+
+            let statusLabel = '';
+            if (isNotStarted) statusLabel = 'Ожидается открытие регистрации';
+            else if (isEnded) statusLabel = 'Завершено';
+            else statusLabel = 'Открыта регистрация';
 
             const isFirstTheme = index % 2 === 0
             const theme = isFirstTheme
@@ -139,6 +133,7 @@ export function OlympiadsSection({ olympiads }: OlympiadsSectionProps) {
                     >
                       Сезон {item.season || '2026–2027'}
                     </span>
+                    {/* Статус регистрации как было в начальном варианте */}
                     <span style={{ fontSize: '12px', fontWeight: 600, color: '#059669', backgroundColor: '#ecfdf5', padding: '4px 8px', borderRadius: '6px' }}>
                       {statusLabel}
                     </span>
@@ -166,16 +161,7 @@ export function OlympiadsSection({ olympiads }: OlympiadsSectionProps) {
                     </div>
                   </div>
 
-                  {/* Если этап не начался или закончился — показываем текст, иначе — кнопку */}
-                  {isNotStarted && start ? (
-                    <div style={{ fontSize: '13px', color: '#1e40af', textAlign: 'center', padding: '12px', backgroundColor: '#eff6ff', borderRadius: '10px', fontWeight: 600 }}>
-                      Регистрация начнется {start.toLocaleDateString('ru-RU')}
-                    </div>
-                  ) : isEnded ? (
-                    <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '12px', background: 'none', fontWeight: 500 }}>
-                      Регистрация и тестирование завершены
-                    </div>
-                  ) : (
+                  {isRegistrationOpen ? (
                     <button
                       type="button"
                       onClick={() => handleRegisterClick(item.slug || item.id)}
@@ -194,6 +180,14 @@ export function OlympiadsSection({ olympiads }: OlympiadsSectionProps) {
                     >
                       Зарегистрироваться и пройти тестирование
                     </button>
+                  ) : isNotStarted && start ? (
+                    <div style={{ fontSize: '13px', color: '#1e40af', textAlign: 'center', padding: '12px', backgroundColor: '#eff6ff', borderRadius: '10px', fontWeight: 600 }}>
+                      Регистрация начнется {start.toLocaleDateString('ru-RU')}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '12px', background: 'none', fontWeight: 500 }}>
+                      Регистрация и тестирование завершены
+                    </div>
                   )}
                 </div>
               </div>

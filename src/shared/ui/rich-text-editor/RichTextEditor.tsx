@@ -1,67 +1,62 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react';
+import styles from './RichTextEditor.module.css';
 
-import { Button } from '@/shared/ui/button/Button'
-import { TextField } from '@/shared/ui/text-field/TextField'
+type Props = {
+  value: string;
+  onChange: (html: string) => void;
+};
 
-import styles from './RichTextEditor.module.css'
+export function RichTextEditor({ value, onChange }: Props) {
+  const editorRef = useRef<HTMLDivElement>(null);
 
-type RichTextEditorProps = {
-  value: string
-  onChange: (value: string) => void
-}
-
-export type { RichTextEditorProps }
-export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const insertAtCursor = (before: string, after: string = '') => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = value.substring(start, end)
-
-    const newValue = value.substring(0, start) + before + selectedText + after + value.substring(end)
-    onChange(newValue)
-
-    requestAnimationFrame(() => {
-      textarea.focus()
-      textarea.selectionStart = start + before.length
-      textarea.selectionEnd = start + before.length + selectedText.length
-    })
-  }
-
-  const insertHeading = () => {
-    insertAtCursor('<h2>', '</h2>')
-  }
-
-  const insertList = () => {
-    insertAtCursor('<ul><li>', '</li></ul>')
-  }
-
-  const insertLink = () => {
-    const url = window.prompt('Введите URL ссылки:')
-    if (url) {
-      insertAtCursor(`<a href="${url}">${url}</a>`, '')
+  // Синхронизация внешнего значения с редактором (только при инициализации)
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
     }
-  }
+  }, [value]);
+
+  const execCommand = (command: string, arg?: string) => {
+    document.execCommand(command, false, arg);
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  const addLink = () => {
+    const url = prompt('Введите URL ссылки:', 'https://');
+    if (url) {
+      execCommand('createLink', url);
+    }
+  };
 
   return (
-    <div className={styles.editor}>
+    <div className={styles.wrapper}>
+      <label className={styles.label}>Дополнительный текст</label>
+      
       <div className={styles.toolbar}>
-        <Button size="sm" variant="ghost" onClick={insertHeading}>Заголовок</Button>
-        <Button size="sm" variant="ghost" onClick={insertList}>Список</Button>
-        <Button size="sm" variant="ghost" onClick={insertLink}>Ссылка</Button>
+        <button type="button" onClick={() => execCommand('bold')} title="Жирный"><b>Ж</b></button>
+        <button type="button" onClick={() => execCommand('italic')} title="Курсив"><i>К</i></button>
+        <button type="button" onClick={() => execCommand('underline')} title="Подчеркнутый"><u>Ч</u></button>
+        <button type="button" onClick={() => execCommand('formatBlock', 'H2')} title="Заголовок">Загаловок</button>
+        <button type="button" onClick={() => execCommand('insertUnorderedList')} title="Список">Список</button>
+        <button type="button" onClick={addLink} title="Ссылка">Ссылка</button>
       </div>
-      <TextField
-        multiline
-        label="Дополнительный текст"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={6}
-        ref={textareaRef as never}
+
+      <div
+        ref={editorRef}
+        className={styles.editor}
+        contentEditable
+        onInput={handleInput}
+        onBlur={handleInput}
+        style={{ minHeight: '120px' }} // Компактный размер
       />
     </div>
-  )
+  );
 }
