@@ -13,11 +13,29 @@
 .content {
   width: min(560px, 100%);
   max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 48px);
   overflow: auto;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 24px 56px rgba(15, 23, 42, 0.25);
   animation: pop-in 0.22s ease;
+}
+
+.close {
+  position: sticky;
+  top: 8px;
+  float: right;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 8px 8px -52px 0;
+  border-radius: 50%;
+  color: #475467;
+  background: #f1f5f9;
+  font-size: 26px;
+  line-height: 1;
 }
 
 @keyframes fade-in {

@@ -169,6 +169,41 @@ export type SiteSettingRow = {
   updated_at: string
 }
 
+export type OlympiadRow = {
+  id: string
+  slug: string
+  title: string
+  profile_title: string | null
+  description: string | null
+  season: string | null
+  year: number
+  format: 'online' | 'offline'
+  status: 'draft' | 'published' | 'completed' | 'archived'
+  start_date: string | null
+  end_date: string | null
+  max_participants: number | null
+  is_published: boolean
+  rich_content: string | null
+  registration_open: boolean | null
+  created_at: string
+  updated_at: string
+}
+
+export type OlympiadProfileRow = {
+  id: string
+  user_id: string
+  olympiad_id: string
+  olympiad_year: number
+  category: 'general' | '8-9' | '10-11' | 'university'
+  score: number
+  rank: 'participant' | 'winner' | 'prize_winner' | 'finalist'
+  diploma_url: string | null
+  certificate_url: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 type Tbl<Row, Insert, Update> = {
   Row: Row
   Insert: Insert
@@ -256,6 +291,20 @@ export type Database = {
         SiteSettingRow,
         Partial<SiteSettingRow> & { key: string },
         Partial<SiteSettingRow>
+      >
+      olympiads: Tbl<
+        OlympiadRow,
+        Partial<OlympiadRow> & { slug: string; title: string; year: number },
+        Partial<OlympiadRow>
+      >
+      olympiad_profiles: Tbl<
+        OlympiadProfileRow,
+        Partial<OlympiadProfileRow> & {
+          user_id: string
+          olympiad_id: string
+          olympiad_year: number
+        },
+        Partial<OlympiadProfileRow>
       >
     }
     Views: Record<string, never>

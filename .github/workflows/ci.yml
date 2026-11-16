@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches: [main, integration/review-olympiads]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_KEY: ci-public-test-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck:api
+      - run: npm run test:unit
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:mobile
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results/
+          retention-days: 7

@@ -7,6 +7,7 @@ import {
   documentsApi,
   faqsApi,
   newsApi,
+  olympiadsApi,
   partnersApi,
   programsApi,
   statsApi,
@@ -28,6 +29,7 @@ type DashboardCounts = {
   timeline: number
   stats: number
   users: number
+  olympiads: number
 }
 
 const EMPTY: DashboardCounts = {
@@ -40,6 +42,7 @@ const EMPTY: DashboardCounts = {
   timeline: 0,
   stats: 0,
   users: 0,
+  olympiads: 0,
 }
 
 export function AdminDashboardPage() {
@@ -60,6 +63,7 @@ export function AdminDashboardPage() {
       timelineApi.listTimeline({ includeUnpublished: true }),
       statsApi.listStats({ includeUnpublished: true }),
       adminApi.listProfiles(),
+      olympiadsApi.listOlympiads({ includeUnpublished: true }),
     ])
       .then((results) => {
         if (cancelled) return
@@ -73,6 +77,7 @@ export function AdminDashboardPage() {
           timeline,
           stats,
           users,
+          olympiads,
         ] = results
 
         const anyError = results.find((res) => res.error)?.error
@@ -87,6 +92,7 @@ export function AdminDashboardPage() {
           timeline: timeline.data?.length ?? 0,
           stats: stats.data?.length ?? 0,
           users: users.data?.length ?? 0,
+          olympiads: olympiads.data?.length ?? 0,
         })
         setIsLoading(false)
       })
@@ -160,6 +166,12 @@ export function AdminDashboardPage() {
       value: counts.users,
       to: '/admin/users',
       description: 'Управление профилями и ролями',
+    },
+    {
+      label: 'Олимпиады и профили',
+      value: counts.olympiads,
+      to: '/admin/olympiads',
+      description: 'Олимпиадные события и участники',
     },
   ]
 

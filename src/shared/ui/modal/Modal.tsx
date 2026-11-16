@@ -46,6 +46,9 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
   return createPortal(
     <div className={styles.overlay} onMouseDown={handleOverlayMouseDown}>
       <div className={cx(styles.content, className)} role="dialog" aria-modal="true">
+        <button type="button" className={styles.close} onClick={onClose} aria-label="Закрыть">
+          ×
+        </button>
         {children}
       </div>
     </div>,

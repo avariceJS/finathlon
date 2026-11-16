@@ -7,23 +7,29 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:mobile": "playwright test",
     "preview": "vite preview",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "db:login": "supabase login",
+    "db:login": "supabase login --agent no --output-format text",
     "db:link": "supabase link --project-ref obwmhbpkkcxaimmbfogg",
     "db:push": "supabase db push",
-    "db:reset": "supabase db reset --linked"
+    "db:reset": "supabase db reset",
+    "test:unit": "node --test tests/unit/*.test.mjs",
+    "typecheck:api": "tsc --noEmit --strict --target ES2023 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck api/admin-create-user.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
+    "dompurify": "^3.4.18",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router": "^7.13.1",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "1.64.1",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
