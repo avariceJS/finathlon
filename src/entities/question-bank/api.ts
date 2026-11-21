@@ -1,10 +1,13 @@
 import { supabase } from '@/shared/supabase'
 import type {
+  CorrectAnswerPayload,
   ImportTaskInput,
+  MatchingPair,
   QuestionBankDetail,
   QuestionBankGradeCategory,
   QuestionBankSummary,
   QuestionTask,
+  QuestionType,
   QuestionVariant,
   QuestionVariantHistoryEntry,
   UpdateQuestionVariantInput,
@@ -16,13 +19,85 @@ const GRADE_LABELS: Record<QuestionBankGradeCategory, string> = {
   '10-11': '10–11 классы',
 }
 
+type OlympiadJoinRow = {
+  title: string
+  profile_title: string | null
+  season: string | null
+  year: number
+}
+
+type BankListRow = {
+  id: string
+  olympiad_id: string
+  grade_category: QuestionBankGradeCategory
+  created_at: string
+  updated_at: string
+  olympiads: OlympiadJoinRow | OlympiadJoinRow[]
+  question_bank_tasks: Array<{
+    id: string
+    question_bank_variants: Array<{ id: string }> | null
+  }> | null
+}
+
+type VariantDbRow = {
+  id: string
+  task_id: string
+  bank_id: string
+  row_number: number
+  question_text: string
+  options: string[] | MatchingPair[]
+  correct_answer: CorrectAnswerPayload
+  points: number | string
+  current_version: number
+  created_at: string
+  updated_at: string
+}
+
+type BankDetailRow = {
+  id: string
+  olympiad_id: string
+  grade_category: QuestionBankGradeCategory
+  created_at: string
+  updated_at: string
+  olympiads: OlympiadJoinRow | OlympiadJoinRow[]
+  question_bank_tasks: Array<{
+    id: string
+    bank_id: string
+    task_number: number
+    question_type: QuestionType
+    question_bank_variants: VariantDbRow[] | null
+  }> | null
+}
+
+type VariantHistoryDbRow = {
+  id: string
+  variant_id: string
+  bank_id: string
+  version_from: number
+  version_to: number
+  changed_by: string | null
+  changes: Record<string, { old: unknown; new: unknown }>
+  created_at: string
+}
+
+export class BankAlreadyExistsError extends Error {
+  readonly code = 'BANK_ALREADY_EXISTS'
+  readonly existingBankId: string | null
+
+  constructor(existingBankId: string | null) {
+    super('Набор вопросов для этого профиля и категории классов уже существует')
+    this.existingBankId = existingBankId
+  }
+}
+
+function unwrapOlympiad(
+  raw: OlympiadJoinRow | OlympiadJoinRow[],
+): OlympiadJoinRow {
+  return Array.isArray(raw) ? raw[0] : raw
+}
+
 function buildDisplayTitle(
-  olympiad: {
-    title: string
-    profile_title: string | null
-    season: string | null
-    year: number
-  },
+  olympiad: OlympiadJoinRow,
   gradeCategory: QuestionBankGradeCategory,
 ): string {
   const baseName = olympiad.profile_title?.trim() || olympiad.title
@@ -56,16 +131,15 @@ export async function listQuestionBanks(): Promise<QuestionBankSummary[]> {
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((row: any) => {
-    const olympiad = Array.isArray(row.olympiads)
-      ? row.olympiads
-      : row.olympiads
+  const rows = (data ?? []) as unknown as BankListRow[]
+
+  return rows.map((row) => {
+    const olympiad = unwrapOlympiad(row.olympiads)
     const tasks = row.question_bank_tasks ?? []
     const variantsCount = tasks.reduce(
-      (sum: number, t: any) => sum + (t.question_bank_variants?.length ?? 0),
+      (sum, t) => sum + (t.question_bank_variants?.length ?? 0),
       0,
     )
-    const gradeCategory = row.grade_category as QuestionBankGradeCategory
 
     return {
       id: row.id,
@@ -74,8 +148,8 @@ export async function listQuestionBanks(): Promise<QuestionBankSummary[]> {
       olympiadProfileTitle: olympiad.profile_title,
       olympiadSeason: olympiad.season,
       olympiadYear: olympiad.year,
-      gradeCategory,
-      displayTitle: buildDisplayTitle(olympiad, gradeCategory),
+      gradeCategory: row.grade_category,
+      displayTitle: buildDisplayTitle(olympiad, row.grade_category),
       tasksCount: tasks.length,
       variantsCount,
       createdAt: row.created_at,
@@ -141,22 +215,22 @@ export async function getQuestionBankById(
 
   if (error) throw new Error(error.message)
 
-  const olympiad = Array.isArray(data.olympiads)
-    ? data.olympiads
-    : data.olympiads
-  const gradeCategory = data.grade_category as QuestionBankGradeCategory
+  const row = data as unknown as BankDetailRow
+  const olympiad = unwrapOlympiad(row.olympiads)
 
-  const tasks: QuestionTask[] = (data.question_bank_tasks ?? [])
-    .sort((a: any, b: any) => a.task_number - b.task_number)
-    .map((t: any) => ({
+  const tasks: QuestionTask[] = (row.question_bank_tasks ?? [])
+    .slice()
+    .sort((a, b) => a.task_number - b.task_number)
+    .map((t) => ({
       id: t.id,
       bankId: t.bank_id,
       taskNumber: t.task_number,
       questionType: t.question_type,
       variants: (t.question_bank_variants ?? [])
-        .sort((a: any, b: any) => a.row_number - b.row_number)
+        .slice()
+        .sort((a, b) => a.row_number - b.row_number)
         .map(
-          (v: any): QuestionVariant => ({
+          (v): QuestionVariant => ({
             id: v.id,
             taskId: v.task_id,
             bankId: v.bank_id,
@@ -175,18 +249,18 @@ export async function getQuestionBankById(
   const variantsCount = tasks.reduce((sum, t) => sum + t.variants.length, 0)
 
   return {
-    id: data.id,
-    olympiadId: data.olympiad_id,
+    id: row.id,
+    olympiadId: row.olympiad_id,
     olympiadTitle: olympiad.title,
     olympiadProfileTitle: olympiad.profile_title,
     olympiadSeason: olympiad.season,
     olympiadYear: olympiad.year,
-    gradeCategory,
-    displayTitle: buildDisplayTitle(olympiad, gradeCategory),
+    gradeCategory: row.grade_category,
+    displayTitle: buildDisplayTitle(olympiad, row.grade_category),
     tasksCount: tasks.length,
     variantsCount,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
     tasks,
   }
 }
@@ -206,17 +280,12 @@ export async function saveOrReplaceQuestionBank(params: {
 
   if (error) {
     if (error.message.includes('BANK_ALREADY_EXISTS')) {
-      const err = new Error(
-        'Набор вопросов для этого профиля и категории классов уже существует',
-      )
-      ;(err as any).code = 'BANK_ALREADY_EXISTS'
-      ;(err as any).existingBankId = error.details || null
-      throw err
+      throw new BankAlreadyExistsError(error.details || null)
     }
     throw new Error(error.message)
   }
 
-  return { bankId: data as string }
+  return { bankId: String(data) }
 }
 
 export async function updateQuestionVariant(
@@ -237,18 +306,20 @@ export async function updateQuestionVariant(
 
   if (error) throw new Error(error.message)
 
+  const v = data as unknown as VariantDbRow
+
   return {
-    id: data.id,
-    taskId: data.task_id,
-    bankId: data.bank_id,
-    rowNumber: data.row_number,
-    questionText: data.question_text,
-    options: data.options,
-    correctAnswer: data.correct_answer,
-    points: Number(data.points),
-    currentVersion: data.current_version,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
+    id: v.id,
+    taskId: v.task_id,
+    bankId: v.bank_id,
+    rowNumber: v.row_number,
+    questionText: v.question_text,
+    options: v.options,
+    correctAnswer: v.correct_answer,
+    points: Number(v.points),
+    currentVersion: v.current_version,
+    createdAt: v.created_at,
+    updatedAt: v.updated_at,
   }
 }
 
@@ -272,7 +343,9 @@ export async function getVariantHistory(
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((row: any) => ({
+  const rows = (data ?? []) as unknown as VariantHistoryDbRow[]
+
+  return rows.map((row) => ({
     id: row.id,
     variantId: row.variant_id,
     bankId: row.bank_id,
