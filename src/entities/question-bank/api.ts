@@ -90,10 +90,46 @@ export class BankAlreadyExistsError extends Error {
   }
 }
 
+type QueryResponse<T> = Promise<{
+  data: T | null
+  error: { message: string; details?: string } | null
+}>
+
+interface UntypedSupabaseClient {
+  from(table: string): {
+    select(columns?: string): {
+      order(column: string, opts?: { ascending?: boolean }): QueryResponse<unknown[]>
+      eq(column: string, value: string): {
+        eq(column: string, value: string): {
+          maybeSingle(): QueryResponse<Record<string, unknown>>
+        }
+        single(): QueryResponse<Record<string, unknown>>
+        order(column: string, opts?: { ascending?: boolean }): QueryResponse<unknown[]>
+      }
+    }
+    update(values: Record<string, unknown>): {
+      eq(column: string, value: string): {
+        select(): {
+          single(): QueryResponse<Record<string, unknown>>
+        }
+      }
+    }
+    delete(): {
+      eq(column: string, value: string): QueryResponse<unknown>
+    }
+  }
+  rpc(
+    fn: string,
+    args: Record<string, unknown>,
+  ): QueryResponse<unknown>
+}
+
+const db = supabase as unknown as UntypedSupabaseClient
+
 function unwrapOlympiad(
   raw: OlympiadJoinRow | OlympiadJoinRow[],
 ): OlympiadJoinRow {
-  return Array.isArray(raw) ? raw[0] : raw
+  return Array.isArray(raw) ? raw : raw
 }
 
 function buildDisplayTitle(
@@ -106,9 +142,8 @@ function buildDisplayTitle(
     : `, ${olympiad.year}`
   return `${baseName}${seasonPart} — ${GRADE_LABELS[gradeCategory]}`
 }
-
 export async function listQuestionBanks(): Promise<QuestionBankSummary[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('question_banks')
     .select(`
       id,
@@ -162,7 +197,7 @@ export async function findExistingQuestionBank(
   olympiadId: string,
   gradeCategory: QuestionBankGradeCategory,
 ): Promise<{ id: string } | null> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('question_banks')
     .select('id')
     .eq('olympiad_id', olympiadId)
@@ -170,13 +205,13 @@ export async function findExistingQuestionBank(
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  return data ? { id: data.id } : null
+  return data && typeof data.id === 'string' ? { id: data.id } : null
 }
 
 export async function getQuestionBankById(
   bankId: string,
 ): Promise<QuestionBankDetail> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('question_banks')
     .select(`
       id,
@@ -271,7 +306,7 @@ export async function saveOrReplaceQuestionBank(params: {
   tasks: ImportTaskInput[]
   replaceExisting?: boolean
 }): Promise<{ bankId: string }> {
-  const { data, error } = await supabase.rpc('upsert_question_bank', {
+  const { data, error } = await db.rpc('upsert_question_bank', {
     p_olympiad_id: params.olympiadId,
     p_grade_category: params.gradeCategory,
     p_tasks: params.tasks,
@@ -292,7 +327,7 @@ export async function updateQuestionVariant(
   variantId: string,
   input: UpdateQuestionVariantInput,
 ): Promise<QuestionVariant> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('question_bank_variants')
     .update({
       question_text: input.questionText,
@@ -324,7 +359,7 @@ export async function updateQuestionVariant(
 }
 
 export async function deleteQuestionBank(bankId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db
     .from('question_banks')
     .delete()
     .eq('id', bankId)
@@ -335,7 +370,7 @@ export async function deleteQuestionBank(bankId: string): Promise<void> {
 export async function getVariantHistory(
   variantId: string,
 ): Promise<QuestionVariantHistoryEntry[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('question_variant_history')
     .select('*')
     .eq('variant_id', variantId)
