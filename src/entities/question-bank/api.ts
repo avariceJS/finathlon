@@ -129,8 +129,16 @@ const db = supabase as unknown as UntypedSupabaseClient
 function unwrapOlympiad(
   raw: OlympiadJoinRow | OlympiadJoinRow[],
 ): OlympiadJoinRow {
-  return Array.isArray(raw) ? raw : raw
+  if (Array.isArray(raw)) {
+    const first = raw.at(0)
+    if (!first) {
+      throw new Error('Олимпиада для набора вопросов не найдена')
+    }
+    return first
+  }
+  return raw
 }
+
 
 function buildDisplayTitle(
   olympiad: OlympiadJoinRow,
