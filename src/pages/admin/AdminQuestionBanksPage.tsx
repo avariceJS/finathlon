@@ -23,7 +23,7 @@ import {
   parseAndValidateExcelFile,
   type ExcelParseResult,
   type ImportValidationError,
-} from '@/features/question-bank-import/excelParser'
+} from '@/features/AuthModal/question-bank-import/excelParser'
 import { olympiadsApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
