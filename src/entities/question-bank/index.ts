@@ -17,6 +17,7 @@ export {
   listQuestionBanks,
   findExistingQuestionBank,
   getQuestionBankById,
+  BankAlreadyExistsError,
   saveOrReplaceQuestionBank,
   updateQuestionVariant,
   deleteQuestionBank,
