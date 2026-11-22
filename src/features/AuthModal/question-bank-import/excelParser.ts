@@ -140,7 +140,8 @@ function extractRowsFromXml(entries: Map<string, string>): string[][] {
   const sheetKey =
     Array.from(entries.keys())
       .filter((k) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(k))
-      .sort()[0] ?? ''
+      .sort()
+      .at(0) ?? ''
 
   const sheetXml = entries.get(sheetKey)
   if (!sheetXml) {
@@ -161,14 +162,14 @@ function extractRowsFromXml(entries: Map<string, string>): string[][] {
       let value = ''
 
       if (type === 's') {
-        const vText = cell.getElementsByTagName('v')[0]?.textContent ?? ''
+        const vText = cell.getElementsByTagName('v').item(0)?.textContent ?? ''
         const ssIdx = Number(vText)
-        value = Number.isInteger(ssIdx) ? (sharedStrings[ssIdx] ?? '') : ''
+        value = Number.isInteger(ssIdx) ? (sharedStrings.at(ssIdx) ?? '') : ''
       } else if (type === 'inlineStr') {
         const tNodes = Array.from(cell.getElementsByTagName('t'))
         value = tNodes.map((n) => n.textContent ?? '').join('')
       } else {
-        value = cell.getElementsByTagName('v')[0]?.textContent ?? ''
+        value = cell.getElementsByTagName('v').item(0)?.textContent ?? ''
       }
 
       while (rowValues.length < colIdx) {
@@ -183,6 +184,8 @@ function extractRowsFromXml(entries: Map<string, string>): string[][] {
 
   return rows
 }
+
+
 export async function parseAndValidateExcelFile(
   file: File,
 ): Promise<ExcelParseResult> {
