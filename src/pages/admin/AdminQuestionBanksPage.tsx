@@ -22,6 +22,7 @@ import {
 import {
   parseAndValidateExcelFile,
   type ExcelParseResult,
+  type ImportValidationError,
 } from '@/features/question-bank-import/excelParser'
 import { olympiadsApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
@@ -691,7 +692,7 @@ export function AdminQuestionBanksPage() {
         </div>
       )}
       <Modal
-        open={importModal.kind !== 'closed'}
+        isOpen={importModal.kind !== 'closed'}
         onClose={closeImportModal}
         title={
           importModal.kind === 'replace'
@@ -824,12 +825,13 @@ export function AdminQuestionBanksPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {parseResult.errors.map((err, idx) => (
-                        <tr key={idx}>
-                          <td>{err.rowNumber ?? '—'}</td>
-                          <td>{err.field}</td>
-                          <td>{err.message}</td>
-                        </tr>
+                      {parseResult.errors.map(
+                        (err: ImportValidationError, idx: number) => (
+                          <tr key={idx}>
+                            <td>{err.rowNumber ?? '—'}</td>
+                            <td>{err.field}</td>
+                            <td>{err.message}</td>
+                          </tr>
                       ))}
                     </tbody>
                   </table>
@@ -884,21 +886,20 @@ export function AdminQuestionBanksPage() {
         </div>
       </Modal>
       <Modal
-        open={editState !== null}
+        isOpen={editState !== null}
         onClose={() => {
           if (!isSavingVariant) setEditState(null)
         }}
-        title={
-          editState
-            ? `Редактирование вопроса №${editState.variant.rowNumber} (${QUESTION_TYPE_LABELS[editState.questionType]})`
-            : ''
-        }
-      >
+        >
         {editState ? (
           <form
             className={styles.formSection}
             onSubmit={(e) => void handleSaveVariantEdit(e)}
           >
+            <h2>
+              Редактирование вопроса №{editState.variant.rowNumber} (
+              {QUESTION_TYPE_LABELS[editState.questionType]})
+            </h2>
             {editError ? (
               <Alert variant="error" title="Ошибка проверки">
                 {editError}
@@ -1009,15 +1010,13 @@ export function AdminQuestionBanksPage() {
         ) : null}
       </Modal>
 
-      <Modal
-        open={historyModal !== null}
+     <Modal
+        isOpen={historyModal !== null}
         onClose={() => setHistoryModal(null)}
-        title={
-          historyModal
-            ? `История изменений вопроса №${historyModal.variantRow}`
-            : ''
-        }
       >
+        {historyModal ? (
+          <h2>История изменений вопроса №{historyModal.variantRow}</h2>
+        ) : null}
         {isLoadingHistory ? (
           <Spinner label="Загружаем историю..." />
         ) : historyModal && historyModal.entries.length === 0 ? (
