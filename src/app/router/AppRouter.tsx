@@ -22,6 +22,8 @@ import { AuthPage, ResetPasswordPage } from '@/pages/auth'
 import { DocumentsPage } from '@/pages/documents'
 import { EventsPage } from '@/pages/events'
 import { HomePage } from '@/pages/home'
+import { AdminDemoPage } from '@/pages/admin/demo-test/AdminDemoPage'
+import { DemoTestPage } from '@/pages/demo-test/DemoTestPage'
 import { NewsDetailPage, NewsListPage } from '@/pages/news'
 import { PartnersPage } from '@/pages/partners'
 import { PrivacyPage, TermsPage } from '@/pages/legal'
@@ -32,6 +34,7 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/demo-test" element={<DemoTestPage />} />
 
       <Route path="/news" element={<NewsListPage />} />
       <Route path="/news/:slug" element={<NewsDetailPage />} />
@@ -100,6 +103,14 @@ export function AppRouter() {
         element={
           <AdminRoute>
             <AdminOlympiadProfilesPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/demo-test/:section?"
+        element={
+          <AdminRoute>
+            <AdminDemoPage />
           </AdminRoute>
         }
       />

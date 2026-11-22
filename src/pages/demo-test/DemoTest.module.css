@@ -1,0 +1,260 @@
+.homeSection {
+  padding-block: clamp(28px, 5vw, 72px);
+}
+
+.homePanel,
+.panel {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow-wrap: anywhere;
+}
+
+.homePanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  align-items: center;
+  gap: clamp(20px, 4vw, 48px);
+  padding: clamp(18px, 4vw, 44px);
+  background: #edf5ff;
+  border-color: #d5e6fa;
+}
+
+.homePanel h2,
+.quiz h1 {
+  font-size: clamp(25px, 3.5vw, 40px);
+  line-height: 1.15;
+}
+
+.homePanel p,
+.subtitle,
+.muted {
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.homeForm,
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.homeForm {
+  --color-primary: #2164bf;
+  --color-primary-hover: #174f9b;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.9fr) auto;
+  align-items: end;
+}
+
+.quiz {
+  --color-primary: #2164bf;
+  --color-primary-hover: #174f9b;
+  display: grid;
+  gap: 20px;
+  max-width: 840px;
+  padding-block: clamp(24px, 5vw, 64px);
+}
+
+.quiz h1 + .subtitle {
+  margin-top: -10px;
+}
+
+.panel {
+  display: grid;
+  gap: 20px;
+  padding: clamp(16px, 4vw, 32px);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.progressLabel,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.actions > *,
+.homeForm > button {
+  min-height: 44px;
+}
+
+.progressLabel {
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.progress {
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #e6eef8;
+  appearance: none;
+}
+
+.progress::-webkit-progress-bar {
+  border-radius: 8px;
+  background: #e6eef8;
+}
+
+.progress::-webkit-progress-value {
+  border-radius: 8px;
+  background: #2164bf;
+}
+
+.progress::-moz-progress-bar {
+  border-radius: 8px;
+  background: #2164bf;
+}
+
+.kind {
+  font-size: 14px;
+  color: #215a9c;
+  font-weight: 650;
+}
+
+.question {
+  font-size: clamp(18px, 2.5vw, 24px);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.question:focus {
+  outline: none;
+}
+
+.answerGroup {
+  display: grid;
+  gap: 8px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.answerOption,
+.choices {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.answerOption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-height: 46px;
+  cursor: pointer;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.answerOption:has(input:checked) {
+  background: #edf5ff;
+  border-color: #85b7f4;
+}
+
+.answerOption input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #2164bf;
+}
+
+.choices {
+  padding-inline-start: 36px;
+  background: #f6f9fd;
+  white-space: pre-wrap;
+}
+
+.choices li + li {
+  margin-top: 6px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metrics > div {
+  display: grid;
+  gap: 4px;
+  padding: clamp(12px, 3vw, 20px);
+  border-radius: var(--radius-md);
+  background: #edf5ff;
+}
+
+.metrics strong {
+  font-size: clamp(21px, 4vw, 32px);
+  color: #18549b;
+}
+
+.metrics span,
+.review dt {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.review {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.review dt {
+  font-weight: 650;
+}
+
+.review dd {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 1180px) {
+  .homePanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 621px) and (max-width: 800px) {
+  .homeForm {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+
+  .homeForm > button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 620px) {
+  .homeForm,
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions > * {
+    flex: 1 1 175px;
+  }
+}

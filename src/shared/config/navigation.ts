@@ -30,6 +30,7 @@ export const ADMIN_NAVIGATION = [
   { label: 'FAQ', to: '/admin/faqs' },
   { label: 'Таймлайн', to: '/admin/timeline' },
   { label: 'Статистика', to: '/admin/stats' },
+  { label: 'Демо-тестирование', to: '/admin/demo-test' },
   { label: 'Уведомления', to: '/admin/notifications' },
   { label: 'Пользователи', to: '/admin/users' },
   { label: 'Олимпиады и профили', to: '/admin/olympiads' },

@@ -8,6 +8,7 @@ import { OlympiadsSection } from '@/widgets/olympiads'
 import { ProgramsSection } from '@/widgets/programs'
 import { StatsSection } from '@/widgets/stats'
 import { TimelineSection } from '@/widgets/timeline'
+import { DemoStartSection } from '@/pages/demo-test/DemoStartSection'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Container } from '@/shared/ui/container/Container'
 import { PageLayout } from '@/shared/ui/page-layout/PageLayout'
@@ -24,6 +25,7 @@ export function HomePage() {
       footer={<Footer contacts={data.contacts} />}
     >
       <HeroSection hero={data.hero} />
+      <DemoStartSection />
 
       {error ? (
         <Container>

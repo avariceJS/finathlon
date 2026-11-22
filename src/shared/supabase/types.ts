@@ -1,3 +1,11 @@
+import type {
+  DemoAttempt,
+  DemoImportReport,
+  DemoQuestion,
+  DemoResult,
+  DemoSession,
+} from '@/entities/demo-test/model'
+
 export type Json =
   | string
   | number
@@ -214,6 +222,13 @@ type Tbl<Row, Insert, Update> = {
 export type Database = {
   public: {
     Tables: {
+      demo_questions: Tbl<
+        DemoQuestion,
+        DemoQuestion,
+        Pick<DemoQuestion, 'body'>
+      >
+      demo_import_reports: Tbl<DemoImportReport, never, never>
+      demo_attempts: Tbl<DemoAttempt, never, never>
       profiles: Tbl<
         ProfileRow,
         Partial<ProfileRow> & { id: string },
@@ -309,6 +324,23 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      demo_import: {
+        Args: { p_questions: DemoQuestion[]; p_reports: DemoImportReport[] }
+        Returns: undefined
+      }
+      demo_start: {
+        Args: {
+          p_profile: string
+          p_grades: string
+          p_region: string
+          p_city: string
+        }
+        Returns: DemoSession
+      }
+      demo_finish: {
+        Args: { p_attempt: string; p_answers: string[][] }
+        Returns: DemoResult
+      }
       is_admin: { Args: { uid: string }; Returns: boolean }
       resolve_auth_email: { Args: { p_identifier: string }; Returns: string }
       release_orphan_auth_email: {
