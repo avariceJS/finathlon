@@ -34,5 +34,6 @@ export const ADMIN_NAVIGATION = [
   { label: 'Пользователи', to: '/admin/users' },
   { label: 'Олимпиады и профили', to: '/admin/olympiads' },
   { label: 'Профили олимпиад', to: '/admin/olympiad-profiles' },
+  { label: 'Набор вопросов', to: '/admin/question-banks' },
   { label: 'Контент сайта', to: '/admin/settings' },
 ]
