@@ -694,13 +694,14 @@ export function AdminQuestionBanksPage() {
       <Modal
         isOpen={importModal.kind !== 'closed'}
         onClose={closeImportModal}
-        title={
-          importModal.kind === 'replace'
-            ? `Повторная загрузка Excel: ${importModal.bank.displayTitle}`
-            : 'Создание набора вопросов из Excel'
-        }
       >
         <div className={styles.formSection}>
+          <h2>
+            {importModal.kind === 'replace'
+              ? `Повторная загрузка Excel: ${importModal.bank.displayTitle}`
+              : 'Создание набора вопросов из Excel'}
+          </h2>
+
           {importError ? (
             <Alert variant="error" title="Проверка не пройдена">
               {importError}
