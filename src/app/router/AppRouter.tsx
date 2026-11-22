@@ -16,6 +16,7 @@ import {
   AdminStatsPage,
   AdminTimelinePage,
   AdminUsersPage,
+  AdminQuestionBanksPage,
 } from '@/pages/admin'
 import { AuthPage, ResetPasswordPage } from '@/pages/auth'
 import { DocumentsPage } from '@/pages/documents'
@@ -99,6 +100,14 @@ export function AppRouter() {
         element={
           <AdminRoute>
             <AdminOlympiadProfilesPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/question-banks"
+        element={
+          <AdminRoute>
+            <AdminQuestionBanksPage />
           </AdminRoute>
         }
       />
