@@ -19,11 +19,14 @@ import {
   type QuestionVariant,
   type QuestionVariantHistoryEntry,
 } from '@/entities/question-bank'
+
 import {
   parseAndValidateExcelFile,
   type ExcelParseResult,
   type ImportValidationError,
-} from '@/features/AuthModal/question-bank-import/excelParser'
+} from '@/entities/question-bank'
+
+
 import { olympiadsApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
@@ -35,6 +38,8 @@ import { AdminLayout } from '@/widgets/admin-layout'
 import { AdminTable } from '@/widgets/admin-table'
 
 import styles from './AdminQuestionBanksPage.module.css'
+
+
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   single_choice: 'Один ответ',
