@@ -3,42 +3,14 @@ import type { Profile } from '@/entities/profile'
 import {
   normalizeUsername,
 } from '@/shared/config/auth-login'
-import type {
-  AchievementRow,
-  NotificationRow,
-  ProfileRow,
-} from '@/shared/supabase'
+import type { AchievementRow, NotificationRow } from '@/shared/supabase'
 
+import { mapProfile } from './profile'
 import { fail, ok, type ApiResult } from './utils'
 
 type AdminProfile = Profile & {
   achievementsCount: number
   eventsCount: number
-}
-
-function toProfile(row: ProfileRow): Profile {
-  return {
-    id: row.id,
-    role: row.role,
-    firstName: row.first_name ?? '',
-    lastName: row.last_name ?? '',
-    middleName: row.middle_name ?? '',
-    email: row.email ?? '',
-    username: row.username ?? '',
-    phone: row.phone ?? '',
-    birthDate: row.birth_date ?? '',
-    country: row.country ?? '',
-    city: row.city ?? '',
-    school: row.school ?? '',
-    classCourse: row.class_course ?? '',
-    telegram: row.telegram ?? '',
-    vk: row.vk ?? '',
-    avatarUrl: row.avatar_url,
-    bio: row.bio ?? '',
-    isComplete: row.is_complete,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
 }
 
 export async function listProfiles(): Promise<ApiResult<AdminProfile[]>> {
@@ -49,7 +21,7 @@ export async function listProfiles(): Promise<ApiResult<AdminProfile[]>> {
 
   if (error) return fail(error)
 
-  const users = (data ?? []).map(toProfile)
+  const users = (data ?? []).map(mapProfile)
   if (users.length === 0) return ok([])
 
   const ids = users.map((u) => u.id)

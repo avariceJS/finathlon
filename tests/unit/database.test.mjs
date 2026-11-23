@@ -23,6 +23,209 @@ async function asRole(db, role, uid, query, params = []) {
   })
 }
 
+test('demo import, scoring and repeated attempts use the saved question snapshot and admin permissions', async () => {
+  const db = new PGlite()
+  const admin = (query, params) =>
+    asRole(db, 'authenticated', adminId, query, params)
+  const visitor = (query, params) => asRole(db, 'anon', null, query, params)
+  const importSql = 'select public.demo_import($1::jsonb, $2::jsonb)'
+  const startSql =
+    "select demo_start('finance','6-7','Москва','Москва') as session"
+  const finishSql = 'select demo_finish($1, $2::jsonb) as result'
+  const report = [
+    { profile: 'finance', grades: '6-7', found: 30, uploaded: 30, issues: [] },
+  ]
+  const templates = [
+    { kind: 'single', options: ['Первый', 'Второй'], solutions: ['2'] },
+    {
+      kind: 'multiple',
+      options: ['Первый', 'Второй', 'Третий'],
+      solutions: ['1', '3'],
+    },
+    {
+      kind: 'matching',
+      options: ['А', 'Б', 'В'],
+      counterparts: ['Икс', 'Игрек', 'Зет'],
+      solutions: [],
+    },
+    {
+      kind: 'short',
+      options: [],
+      solutions: ['Счёт 1,5', 'допустимый ответ'],
+    },
+    { kind: 'sequence', options: ['Шаг А', 'Шаг Б', 'Шаг В'], solutions: [] },
+  ]
+  const rows = Array.from({ length: 30 }, (_, index) => ({
+    profile: 'finance',
+    grades: '6-7',
+    number: index + 1,
+    body: {
+      prompt: `Вопрос ${index + 1}`,
+      explanation: 'Пояснение',
+      counterparts: [],
+      points: 2,
+      ...templates[index % 5],
+    },
+  }))
+  try {
+    await db.exec(`
+      create role anon;
+      create role authenticated;
+      create schema auth;
+      create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+      create function auth.uid() returns uuid language sql stable as
+        $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+      grant usage on schema public, auth to anon, authenticated;
+    `)
+    await db.exec(
+      (await migration('20260514000000_init_schema')).replace(
+        'create extension if not exists pgcrypto;',
+        '',
+      ),
+    )
+    await db.exec(await migration('20261109130000_olympiads_and_profiles'))
+    await db.exec(await migration('20261117000000_harden_olympiads'))
+    await db.exec(await migration('20261121000000_question_banks'))
+    await db.exec(await migration('20261122120000_demo_testing'))
+    await db.query('insert into auth.users (id) values ($1), ($2)', [
+      adminId,
+      userId,
+    ])
+    await db.query("update profiles set role='admin' where id=$1", [adminId])
+
+    await assert.rejects(visitor(startSql), /ещё не готов/)
+    await assert.rejects(
+      asRole(db, 'authenticated', userId, importSql, [
+        JSON.stringify(rows),
+        JSON.stringify(report),
+      ]),
+      /Недостаточно прав/,
+    )
+    await assert.rejects(
+      admin(importSql, [
+        JSON.stringify([
+          ...rows.slice(0, 29),
+          { ...rows[29], body: { ...rows[29].body, points: 0 } },
+        ]),
+        JSON.stringify(report),
+      ]),
+      /check constraint/,
+    )
+    assert.equal((await admin('select * from demo_questions')).rows.length, 0)
+    await admin(importSql, [JSON.stringify(rows), JSON.stringify(report)])
+    await assert.rejects(
+      visitor('select body from demo_questions'),
+      /permission denied/,
+    )
+    assert.equal(
+      (
+        await asRole(
+          db,
+          'authenticated',
+          userId,
+          'select body from demo_questions',
+        )
+      ).rows.length,
+      0,
+    )
+    assert.equal(
+      (await admin('select * from demo_import_reports')).rows[0].uploaded,
+      30,
+    )
+
+    const {
+      rows: [{ session }],
+    } = await visitor(startSql)
+    assert.equal(session.questions.length, 30)
+    const answers = session.questions.map((question, index) => {
+      assert.equal(question.number, index + 1)
+      assert.equal('solutions' in question || 'explanation' in question, false)
+      const body = rows[index].body
+      switch (body.kind) {
+        case 'short':
+          return ['  СЧЕТ 1.5  ']
+        case 'multiple':
+          return [...body.solutions].reverse()
+        case 'matching':
+          return body.counterparts.map((value) =>
+            String(question.counterparts.indexOf(value) + 1),
+          )
+        case 'sequence':
+          return body.options.map((value) =>
+            String(question.options.indexOf(value) + 1),
+          )
+        default:
+          return body.solutions
+      }
+    })
+    await assert.rejects(
+      visitor(finishSql, [session.id, JSON.stringify(answers.slice(0, 29))]),
+      /все 30/,
+    )
+    const incomplete = [...answers]
+    incomplete[2] = ['1', '1', '3']
+    await assert.rejects(
+      visitor(finishSql, [session.id, JSON.stringify(incomplete)]),
+      /вопрос №3/,
+    )
+
+    const edited = {
+      ...rows[0].body,
+      points: 5,
+      solutions: ['1'],
+      prompt: 'Новый текст',
+    }
+    await admin(
+      "update demo_questions set body=$1 where profile='finance' and grades='6-7' and number=1",
+      [JSON.stringify(edited)],
+    )
+    answers[1] = ['1']
+    const {
+      rows: [{ result }],
+    } = await visitor(finishSql, [session.id, JSON.stringify(answers)])
+    assert.equal(result.correctCount, 29)
+    assert.equal(result.score, 58)
+    assert.equal(result.maxScore, 60)
+    assert.equal(result.mistakes[0].number, 2)
+    assert.deepEqual(result.mistakes[0].solutions, ['1', '3'])
+    assert.equal(result.mistakes[0].explanation, 'Пояснение')
+    assert.deepEqual(
+      (await visitor(finishSql, [session.id, '[]'])).rows[0].result,
+      result,
+    )
+
+    const second = (await visitor(startSql)).rows[0].session
+    assert.notEqual(second.id, session.id)
+    assert.equal(second.questions[0].prompt, 'Новый текст')
+    assert.equal(second.questions[0].points, 5)
+    assert.deepEqual(
+      (
+        await admin(
+          'select correct_count, incorrect_numbers from demo_attempts',
+        )
+      ).rows,
+      [{ correct_count: 29, incorrect_numbers: [2] }],
+    )
+    assert.equal(
+      (
+        await asRole(
+          db,
+          'authenticated',
+          userId,
+          'select correct_count from demo_attempts',
+        )
+      ).rows.length,
+      0,
+    )
+    await assert.rejects(
+      visitor('select correct_count from demo_attempts'),
+      /permission denied/,
+    )
+  } finally {
+    await db.close()
+  }
+})
+
 for (const existingFormat of [false, true]) {
   test(`upgrade preserves data and enforces permissions (${existingFormat ? 'format' : 'legacy stage'} schema)`, async () => {
     const db = new PGlite()
@@ -76,6 +279,17 @@ for (const existingFormat of [false, true]) {
       )
       await db.query("update profiles set role='user' where id=$1", [userId])
       await db.exec(await migration('20261117000000_harden_olympiads'))
+      await db.exec(await migration('20261123120000_olympiad_registration'))
+      const register = () =>
+        asRole(
+          db,
+          'authenticated',
+          userId,
+          'select register_for_olympiad_profile($1, $2::jsonb) as id',
+          [eventId, JSON.stringify({ last_name: 'Иванов', first_name: 'Иван' })],
+        )
+      assert.ok((await register()).rows[0].id)
+      await assert.rejects(register, /already_registered/)
       const {
         rows: [existing],
       } = await db.query('select * from olympiads where id=$1', [eventId])

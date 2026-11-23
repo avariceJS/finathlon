@@ -73,3 +73,31 @@ export type OlympiadProfileInput = {
   certificateUrl?: string | null
   notes?: string | null
 }
+
+export type RegistrationOlympiadStatus =
+  | 'draft'
+  | 'published'
+  | 'completed'
+  | 'archived'
+
+/** Состояние регистрации и тестирования по профилю на текущий момент. */
+export type OlympiadProfileAvailability = 'open' | 'upcoming' | 'closed'
+
+export type RegistrationOlympiad = {
+  id: string
+  olympiadTitle: string
+  profileTitle: string
+  season: string
+  startsAt: string | null
+  endsAt: string | null
+  summary: string
+  status: RegistrationOlympiadStatus
+  availability: OlympiadProfileAvailability
+}
+
+export type OlympiadRegistration = {
+  id: string
+  profileId: string
+  createdAt: string
+  profile: RegistrationOlympiad | null
+}

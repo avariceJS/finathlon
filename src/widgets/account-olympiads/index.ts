@@ -1,0 +1,1 @@
+export { OlympiadsSection } from './OlympiadsSection'

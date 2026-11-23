@@ -11,6 +11,7 @@ type AccountSidebarProps = {
 
 const ICONS: Record<string, string> = {
   personal: '👤',
+  olympiads: '🎓',
   events: '📅',
   achievements: '🏆',
   notifications: '🔔',

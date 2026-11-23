@@ -7,4 +7,8 @@ export type {
   OlympiadProfileInput,
   OlympiadProfileCategory,
   OlympiadProfileRank,
+  OlympiadProfileAvailability,
+  RegistrationOlympiadStatus,
+  RegistrationOlympiad,
+  OlympiadRegistration,
 } from './types'

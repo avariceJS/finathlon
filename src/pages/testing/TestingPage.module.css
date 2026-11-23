@@ -1,0 +1,22 @@
+.container {
+  max-width: 1024px;
+  padding-bottom: 72px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .actions > * {
+    width: 100%;
+  }
+}

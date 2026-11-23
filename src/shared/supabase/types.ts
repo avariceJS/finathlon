@@ -1,3 +1,11 @@
+import type {
+  DemoAttempt,
+  DemoImportReport,
+  DemoQuestion,
+  DemoResult,
+  DemoSession,
+} from '@/entities/demo-test/model'
+
 export type Json =
   | string
   | number
@@ -27,6 +35,27 @@ export type ProfileRow = {
   avatar_url: string | null
   bio: string | null
   is_complete: boolean
+  federal_district: string | null
+  region: string | null
+  postal_code: string | null
+  locality_type: string | null
+  address: string | null
+  is_rural: boolean | null
+  school_address: string | null
+  school_phone: string | null
+  school_email: string | null
+  is_orphan: boolean | null
+  has_disability: boolean | null
+  motivation: string | null
+  finance_interest: string | null
+  info_source: string | null
+  parent_full_name: string | null
+  parent_email: string | null
+  parent_phone: string | null
+  organizations: string | null
+  teacher_full_name: string | null
+  teacher_phone: string | null
+  teacher_email: string | null
   created_at: string
   updated_at: string
 }
@@ -204,6 +233,19 @@ export type OlympiadProfileRow = {
   updated_at: string
 }
 
+export type OlympiadRegistrationRow = {
+  id: string
+  user_id: string
+  profile_id: string
+  email: string
+  last_name: string
+  first_name: string
+  middle_name: string | null
+  form_data: Json
+  status: string
+  created_at: string
+}
+
 type Tbl<Row, Insert, Update> = {
   Row: Row
   Insert: Insert
@@ -214,6 +256,13 @@ type Tbl<Row, Insert, Update> = {
 export type Database = {
   public: {
     Tables: {
+      demo_questions: Tbl<
+        DemoQuestion,
+        DemoQuestion,
+        Pick<DemoQuestion, 'body'>
+      >
+      demo_import_reports: Tbl<DemoImportReport, never, never>
+      demo_attempts: Tbl<DemoAttempt, never, never>
       profiles: Tbl<
         ProfileRow,
         Partial<ProfileRow> & { id: string },
@@ -306,14 +355,50 @@ export type Database = {
         },
         Partial<OlympiadProfileRow>
       >
+      olympiad_registrations: Tbl<
+        OlympiadRegistrationRow,
+        Partial<OlympiadRegistrationRow> & {
+          user_id: string
+          profile_id: string
+          email: string
+          last_name: string
+          first_name: string
+        },
+        Partial<OlympiadRegistrationRow>
+      >
     }
     Views: Record<string, never>
     Functions: {
+      demo_import: {
+        Args: { p_questions: DemoQuestion[]; p_reports: DemoImportReport[] }
+        Returns: undefined
+      }
+      demo_start: {
+        Args: {
+          p_profile: string
+          p_grades: string
+          p_region: string
+          p_city: string
+        }
+        Returns: DemoSession
+      }
+      demo_finish: {
+        Args: { p_attempt: string; p_answers: string[][] }
+        Returns: DemoResult
+      }
       is_admin: { Args: { uid: string }; Returns: boolean }
       resolve_auth_email: { Args: { p_identifier: string }; Returns: string }
       release_orphan_auth_email: {
         Args: { p_email: string }
         Returns: boolean
+      }
+      olympiad_profile_is_open: {
+        Args: { p_profile_id: string }
+        Returns: boolean
+      }
+      register_for_olympiad_profile: {
+        Args: { p_profile_id: string; p_form: Json }
+        Returns: string
       }
     }
     Enums: Record<string, never>

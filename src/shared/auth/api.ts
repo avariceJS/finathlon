@@ -3,6 +3,8 @@ import { AUTH_LOGIN_EMAIL_DOMAIN } from '@/shared/config/auth-login'
 
 export type AuthResult = {
   error: string | null
+  /** `email_taken` — кабинет с такой почтой уже существует. */
+  code?: 'email_taken'
 }
 
 export type LoginPayload = {
@@ -132,7 +134,10 @@ export async function registerWithProfile(
       }
     }
     if (released !== true) {
-      return { error: 'Пользователь с такой почтой уже зарегистрирован' }
+      return {
+        error: 'Пользователь с такой почтой уже зарегистрирован',
+        code: 'email_taken',
+      }
     }
     const retry = await attempt()
     data = retry.data
@@ -141,7 +146,10 @@ export async function registerWithProfile(
 
   if (error) return { error: humanizeAuthError(error.message) }
   if (emailIsTaken(null, data.user)) {
-    return { error: 'Пользователь с такой почтой уже зарегистрирован' }
+    return {
+      error: 'Пользователь с такой почтой уже зарегистрирован',
+      code: 'email_taken',
+    }
   }
   if (!data.user) {
     return {

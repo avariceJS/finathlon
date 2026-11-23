@@ -1,5 +1,8 @@
 import type { UserRole } from '@/shared/supabase'
 
+/** Ответ «да / нет»; пустая строка — значение ещё не выбрано. */
+export type YesNo = '' | 'yes' | 'no'
+
 export type Profile = {
   id: string
   role: UserRole
@@ -18,6 +21,27 @@ export type Profile = {
   vk: string
   avatarUrl: string | null
   bio: string
+  federalDistrict: string
+  region: string
+  postalCode: string
+  localityType: string
+  address: string
+  isRural: YesNo
+  schoolAddress: string
+  schoolPhone: string
+  schoolEmail: string
+  isOrphan: YesNo
+  hasDisability: YesNo
+  motivation: string
+  financeInterest: string
+  infoSource: string
+  parentFullName: string
+  parentEmail: string
+  parentPhone: string
+  organizations: string
+  teacherFullName: string
+  teacherPhone: string
+  teacherEmail: string
   isComplete: boolean
   createdAt: string
   updatedAt: string
@@ -36,6 +60,27 @@ export type ProfileFormValues = {
   telegram: string
   vk: string
   bio: string
+  federalDistrict: string
+  region: string
+  postalCode: string
+  localityType: string
+  address: string
+  isRural: YesNo
+  schoolAddress: string
+  schoolPhone: string
+  schoolEmail: string
+  isOrphan: YesNo
+  hasDisability: YesNo
+  motivation: string
+  financeInterest: string
+  infoSource: string
+  parentFullName: string
+  parentEmail: string
+  parentPhone: string
+  organizations: string
+  teacherFullName: string
+  teacherPhone: string
+  teacherEmail: string
 }
 
 export type UserNotification = {

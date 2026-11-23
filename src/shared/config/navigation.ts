@@ -13,6 +13,7 @@ export const SITE_NAVIGATION: NavLink[] = [
 
 export const ACCOUNT_NAVIGATION = [
   { label: 'Личные данные', to: '/account/personal', key: 'personal' as const },
+  { label: 'Мои профили', to: '/account/olympiads', key: 'olympiads' as const },
   { label: 'Мои мероприятия', to: '/account/events', key: 'events' as const },
   { label: 'Достижения', to: '/account/achievements', key: 'achievements' as const },
   { label: 'Уведомления', to: '/account/notifications', key: 'notifications' as const },
@@ -30,6 +31,7 @@ export const ADMIN_NAVIGATION = [
   { label: 'FAQ', to: '/admin/faqs' },
   { label: 'Таймлайн', to: '/admin/timeline' },
   { label: 'Статистика', to: '/admin/stats' },
+  { label: 'Демо-тестирование', to: '/admin/demo-test' },
   { label: 'Уведомления', to: '/admin/notifications' },
   { label: 'Пользователи', to: '/admin/users' },
   { label: 'Олимпиады и профили', to: '/admin/olympiads' },

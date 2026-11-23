@@ -1,10 +1,12 @@
 import { supabase } from '@/shared/supabase'
-import type {
-  Profile,
-  ProfileFormValues,
-  UserAchievement,
-  UserEvent,
-  UserNotification,
+import {
+  booleanToYesNo,
+  questionnaireToRow,
+  type Profile,
+  type ProfileFormValues,
+  type UserAchievement,
+  type UserEvent,
+  type UserNotification,
 } from '@/entities/profile'
 import type {
   AchievementRow,
@@ -15,7 +17,7 @@ import type {
 
 import { fail, ok, type ApiResult } from './utils'
 
-function mapProfile(row: ProfileRow): Profile {
+export function mapProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     role: row.role,
@@ -34,6 +36,27 @@ function mapProfile(row: ProfileRow): Profile {
     vk: row.vk ?? '',
     avatarUrl: row.avatar_url,
     bio: row.bio ?? '',
+    federalDistrict: row.federal_district ?? '',
+    region: row.region ?? '',
+    postalCode: row.postal_code ?? '',
+    localityType: row.locality_type ?? '',
+    address: row.address ?? '',
+    isRural: booleanToYesNo(row.is_rural),
+    schoolAddress: row.school_address ?? '',
+    schoolPhone: row.school_phone ?? '',
+    schoolEmail: row.school_email ?? '',
+    isOrphan: booleanToYesNo(row.is_orphan),
+    hasDisability: booleanToYesNo(row.has_disability),
+    motivation: row.motivation ?? '',
+    financeInterest: row.finance_interest ?? '',
+    infoSource: row.info_source ?? '',
+    parentFullName: row.parent_full_name ?? '',
+    parentEmail: row.parent_email ?? '',
+    parentPhone: row.parent_phone ?? '',
+    organizations: row.organizations ?? '',
+    teacherFullName: row.teacher_full_name ?? '',
+    teacherPhone: row.teacher_phone ?? '',
+    teacherEmail: row.teacher_email ?? '',
     isComplete: row.is_complete,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -62,15 +85,7 @@ export async function updateMyProfile(
   values: ProfileFormValues,
 ): Promise<ApiResult<Profile>> {
   const payload = {
-    first_name: values.firstName.trim() || null,
-    last_name: values.lastName.trim() || null,
-    middle_name: values.middleName.trim() || null,
-    phone: values.phone.trim() || null,
-    birth_date: values.birthDate || null,
-    country: values.country.trim() || null,
-    city: values.city.trim() || null,
-    school: values.school.trim() || null,
-    class_course: values.classCourse.trim() || null,
+    ...questionnaireToRow(values),
     telegram: values.telegram.trim() || null,
     vk: values.vk.trim() || null,
     bio: values.bio.trim() || null,
