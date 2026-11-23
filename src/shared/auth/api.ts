@@ -17,6 +17,7 @@ export type RegisterPayload = {
   password: string
   firstName: string
   lastName: string
+  emailRedirectTo?: string
 }
 
 async function resolveLoginToEmail(
@@ -80,16 +81,12 @@ function emailIsTaken(
   )
 }
 
-async function signUpNewUser(payload: {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-}) {
+async function signUpNewUser(payload: RegisterPayload) {
   return supabase.auth.signUp({
     email: payload.email,
     password: payload.password,
     options: {
+      emailRedirectTo: payload.emailRedirectTo,
       data: {
         first_name: payload.firstName,
         last_name: payload.lastName,
@@ -112,45 +109,21 @@ export async function registerWithProfile(
     }
   }
 
-  const attempt = () =>
-    signUpNewUser({
-      email: emailLower,
-      password: payload.password,
-      firstName,
-      lastName,
-    })
-
-  let { data, error } = await attempt()
+  const { data, error } = await signUpNewUser({
+    email: emailLower,
+    password: payload.password,
+    firstName,
+    lastName,
+    emailRedirectTo: payload.emailRedirectTo,
+  })
 
   if (emailIsTaken(error, data.user)) {
-    const { data: released, error: releaseError } = await supabase.rpc(
-      'release_orphan_auth_email',
-      { p_email: emailLower },
-    )
-    if (releaseError) {
-      return {
-        error:
-          'Почта ещё занята удалённой учётной записью. Выполните в Supabase новую SQL-миграцию и повторите регистрацию.',
-      }
-    }
-    if (released !== true) {
-      return {
-        error: 'Пользователь с такой почтой уже зарегистрирован',
-        code: 'email_taken',
-      }
-    }
-    const retry = await attempt()
-    data = retry.data
-    error = retry.error
-  }
-
-  if (error) return { error: humanizeAuthError(error.message) }
-  if (emailIsTaken(null, data.user)) {
     return {
       error: 'Пользователь с такой почтой уже зарегистрирован',
       code: 'email_taken',
     }
   }
+  if (error) return { error: humanizeAuthError(error.message) }
   if (!data.user) {
     return {
       error:
@@ -243,7 +216,7 @@ function humanizeAuthError(message: string): string {
     return 'Введите корректный email'
   }
   if (lower.includes('email not confirmed')) {
-    return 'Email не подтверждён. Выключите Confirm email в настройках Supabase.'
+    return 'Подтвердите почту по ссылке из письма, затем войдите снова.'
   }
   if (lower.includes('rate limit') || lower.includes('too many')) {
     return 'Слишком много попыток. Подождите и попробуйте ещё раз.'

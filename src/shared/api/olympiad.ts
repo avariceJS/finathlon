@@ -22,13 +22,19 @@ function mapProfile(row: OlympiadRow): RegistrationOlympiad {
     endsAt: row.end_date,
     summary: row.description ?? '',
     status: row.status,
-    availability: getRegistrationState({ status: row.status, isPublished: row.is_published, registrationOpen: row.registration_open, startDate: row.start_date, endDate: row.end_date }),
+    availability: getRegistrationState({
+      status: row.status,
+      isPublished: row.is_published,
+      registrationOpen: row.registration_open,
+      startDate: row.start_date,
+      endDate: row.end_date,
+    }),
   }
 }
 
 /**
  * Профили из раздела «Олимпиады и профили», видимые участникам:
- * опубликованные и завершённые. Доступность регистрации — в `availability`.
+ * опубликованные. Доступность регистрации — в `availability`.
  */
 export async function listVisibleProfiles(): Promise<
   ApiResult<RegistrationOlympiad[]>
@@ -36,7 +42,7 @@ export async function listVisibleProfiles(): Promise<
   const { data, error } = await supabase
     .from('olympiads')
     .select('*')
-    .in('status', ['published', 'completed'])
+    .eq('status', 'published')
     .eq('is_published', true)
     .order('created_at')
 
@@ -47,7 +53,7 @@ export async function listVisibleProfiles(): Promise<
 function humanizeRegistrationError(message: string): string {
   if (message.includes('already_registered')) return ALREADY_REGISTERED_MESSAGE
   if (message.includes('profile_closed')) {
-    return 'Регистрация и тестирование по этому профилю сейчас закрыты.'
+    return 'Регистрация по этому профилю сейчас закрыта.'
   }
   if (message.includes('not_authenticated')) {
     return 'Сессия истекла. Войдите в личный кабинет и отправьте анкету ещё раз.'

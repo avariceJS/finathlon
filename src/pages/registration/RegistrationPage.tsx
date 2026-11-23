@@ -12,7 +12,11 @@ import {
   type QuestionnaireField,
 } from '@/entities/profile'
 import { QuestionnaireFields } from '@/features/questionnaire'
-import { olympiadApi, siteSettingsApi, type ContactsSetting } from '@/shared/api'
+import {
+  olympiadApi,
+  siteSettingsApi,
+  type ContactsSetting,
+} from '@/shared/api'
 import { ALREADY_REGISTERED_MESSAGE } from '@/shared/api/olympiad'
 import { DEFAULT_CONTACTS_SETTING } from '@/shared/api/site-settings'
 import {
@@ -35,7 +39,7 @@ import { Header } from '@/widgets/header'
 
 import styles from './RegistrationPage.module.css'
 
-const SUBMIT_LABEL = 'Зарегистрироваться и перейти к тестированию'
+const SUBMIT_LABEL = 'Зарегистрироваться на олимпиаду'
 
 function profileLabel(profile: RegistrationOlympiad): string {
   return `${profile.olympiadTitle} — ${profile.profileTitle} (${profile.season})`
@@ -44,7 +48,7 @@ function profileLabel(profile: RegistrationOlympiad): string {
 export function RegistrationPage() {
   const [searchParams] = useSearchParams()
   const requestedId = searchParams.get('profile')
-  const { user, profile, isAuthLoading } = useAuth()
+  const { profile, isAuthLoading, isProfileLoading } = useAuth()
 
   const [profiles, setProfiles] = useState<RegistrationOlympiad[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -77,9 +81,7 @@ export function RegistrationPage() {
     ? (profiles.find((item) => item.id === requestedId) ?? null)
     : null
   const isReady =
-    !isLoading &&
-    !isAuthLoading &&
-    (isFormShown || !user || profile !== null)
+    !isLoading && !isAuthLoading && (isFormShown || !isProfileLoading)
 
   useEffect(() => {
     if (isReady && !isFormShown) setIsFormShown(true)
@@ -96,7 +98,10 @@ export function RegistrationPage() {
     )
   } else if (requestedId && (!requested || requested.availability !== 'open')) {
     body = (
-      <ClosedNotice profile={requested} hasOtherOpen={openProfiles.length > 0} />
+      <ClosedNotice
+        profile={requested}
+        hasOtherOpen={openProfiles.length > 0}
+      />
     )
   } else if (openProfiles.length === 0) {
     body = <NoOpenProfilesNotice profiles={profiles} />
@@ -115,7 +120,7 @@ export function RegistrationPage() {
       <PageHeader
         eyebrow="Отборочное тестирование"
         title="Регистрация участника"
-        description="Выберите профиль олимпиады и заполните анкету. Личный кабинет будет создан автоматически, а после отправки формы вы сразу перейдёте к тестированию."
+        description="Выберите профиль олимпиады и заполните анкету. Если у вас ещё нет кабинета, создайте его при заполнении формы. После регистрации статус появится в кабинете."
       />
       <Container className={styles.container}>{body}</Container>
     </PageLayout>
@@ -136,11 +141,11 @@ function ClosedNotice({
   if (profile?.availability === 'upcoming') {
     title = 'Регистрация ещё не началась'
     text = profile.startsAt
-      ? `Регистрация и тестирование по профилю «${profile.profileTitle}» начнутся ${formatDateTime(profile.startsAt)}.`
-      : `Регистрация и тестирование по профилю «${profile.profileTitle}» ещё не начались.`
+      ? `Регистрация по профилю «${profile.profileTitle}» начнётся ${formatDateTime(profile.startsAt)}.`
+      : `Регистрация по профилю «${profile.profileTitle}» ещё не началась.`
   } else if (profile) {
     title = 'Регистрация завершена'
-    text = `Регистрация и тестирование по профилю «${profile.profileTitle}» завершены.`
+    text = `Регистрация по профилю «${profile.profileTitle}» завершена.`
   }
 
   return (
@@ -160,7 +165,11 @@ function ClosedNotice({
   )
 }
 
-function NoOpenProfilesNotice({ profiles }: { profiles: RegistrationOlympiad[] }) {
+function NoOpenProfilesNotice({
+  profiles,
+}: {
+  profiles: RegistrationOlympiad[]
+}) {
   const upcoming = profiles.filter((item) => item.availability === 'upcoming')
 
   return (
@@ -185,7 +194,7 @@ function NoOpenProfilesNotice({ profiles }: { profiles: RegistrationOlympiad[] }
             ))}
           </ul>
         ) : (
-          'Регистрация и тестирование по профилям олимпиады завершены или ещё не объявлены. Следите за новостями на сайте.'
+          'Регистрация по профилям олимпиады завершена или ещё не объявлена. Следите за новостями на сайте.'
         )}
       </Alert>
       <div className={styles.noticeActions}>
@@ -338,6 +347,10 @@ function RegistrationForm({
       password: account.password,
       firstName: values.firstName,
       lastName: values.lastName,
+      emailRedirectTo: new URL(
+        `/registration?profile=${encodeURIComponent(profileId)}`,
+        window.location.origin,
+      ).href,
     })
 
     if (created.code === 'email_taken') {
@@ -357,7 +370,10 @@ function RegistrationForm({
         return false
       }
     } else if (created.error) {
-      showNotice({ title: 'Не удалось создать личный кабинет', text: created.error })
+      showNotice({
+        title: 'Не удалось создать личный кабинет',
+        text: created.error,
+      })
       return false
     }
 
@@ -365,7 +381,7 @@ function RegistrationForm({
     if (!data.session) {
       showNotice({
         title: 'Подтвердите почту',
-        text: 'Личный кабинет создан. Перейдите по ссылке из письма, войдите в кабинет и завершите регистрацию на профиль.',
+        text: 'Личный кабинет создан. Подтвердите почту по ссылке из письма, затем заполните и отправьте анкету для выбранного профиля.',
       })
       return false
     }
@@ -467,8 +483,7 @@ function RegistrationForm({
             {selected.summary ? <p>{selected.summary}</p> : null}
             {selected.endsAt ? (
               <p className={styles.profileDates}>
-                Регистрация и тестирование открыты до{' '}
-                {formatDateTime(selected.endsAt)}.
+                Регистрация открыта до {formatDateTime(selected.endsAt)}.
               </p>
             ) : null}
           </div>
@@ -503,7 +518,9 @@ function RegistrationForm({
                 type="password"
                 autoComplete="new-password"
                 value={account.password}
-                onChange={(e) => handleAccountChange('password', e.target.value)}
+                onChange={(e) =>
+                  handleAccountChange('password', e.target.value)
+                }
                 error={errors.password}
                 hint="Минимум 6 символов"
               />
@@ -520,8 +537,8 @@ function RegistrationForm({
               />
             </div>
             <p className={styles.accountHint}>
-              С этой почтой и паролем вы сможете войти в личный кабинет после
-              тестирования. Уже есть кабинет?{' '}
+              С этой почтой и паролем вы сможете войти в личный кабинет. Уже
+              есть кабинет?{' '}
               <Button
                 to={`/auth?next=${encodeURIComponent(
                   profileId
@@ -556,9 +573,8 @@ function RegistrationForm({
           {SUBMIT_LABEL}
         </Button>
         <p className={styles.submitNote}>
-          После отправки формы вы будете зарегистрированы на выбранный профиль
-          и сразу перейдёте к тестированию. Личный кабинет будет создан
-          автоматически.
+          После регистрации откроется страница со статусом заявки. Если нужно
+          подтвердить почту, сайт предложит вернуться к анкете после подтверждения.
         </p>
         <p className={styles.terms}>
           Отправляя форму, вы соглашаетесь с{' '}

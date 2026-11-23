@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileOwner, setProfileOwner] = useState<string | null>(null)
   const [isFetchingProfile, setIsFetchingProfile] = useState(false)
   const profileRequest = useRef(0)
+  const currentUserId = useRef<string | null>(null)
   const userId = session?.user?.id ?? null
   const currentProfile = profile?.id === userId ? profile : null
   const isProfileLoading = Boolean(
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = useCallback(async () => {
     const request = ++profileRequest.current
+    const userId = currentUserId.current
     if (!userId) {
       setProfile(null)
       setProfileOwner(null)
@@ -37,23 +39,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsFetchingProfile(true)
     const result = await profileApi.getMyProfile()
-    if (request !== profileRequest.current) return
+    if (request !== profileRequest.current || userId !== currentUserId.current)
+      return
     setProfile(result.error || result.data?.id !== userId ? null : result.data)
     setProfileOwner(userId)
     setIsFetchingProfile(false)
-  }, [userId])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return
+      currentUserId.current = data.session?.user.id ?? null
       setSession(data.session)
       setIsAuthLoading(false)
     })
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
+        currentUserId.current = nextSession?.user.id ?? null
         setSession(nextSession)
         setIsAuthLoading(false)
       },

@@ -14,7 +14,7 @@ export function OlympiadsSection({ registrations }: OlympiadsSectionProps) {
     return (
       <EmptyState
         title="Вы пока не зарегистрированы ни на один профиль"
-        description="Выберите профиль олимпиады и пройдите отборочное тестирование."
+        description="Выберите профиль олимпиады и заполните анкету."
         actions={<Button to="/registration">Выбрать профиль</Button>}
       />
     )
@@ -45,17 +45,9 @@ export function OlympiadsSection({ registrations }: OlympiadsSectionProps) {
               Дата регистрации: {formatDate(createdAt)}
             </p>
             <div className={styles.actions}>
-              {profile?.availability === 'open' ? (
-                <Button size="sm" to={`/testing/${profileId}`}>
-                  Перейти к тестированию
-                </Button>
-              ) : (
-                <span className={styles.status}>
-                  {profile?.availability === 'upcoming'
-                    ? 'Тестирование ещё не началось'
-                    : 'Тестирование завершено'}
-                </span>
-              )}
+              <Button size="sm" to={`/testing/${profileId}`}>
+                Статус регистрации
+              </Button>
             </div>
           </article>
         ))}

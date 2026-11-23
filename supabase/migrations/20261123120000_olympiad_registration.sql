@@ -14,7 +14,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select exists (
     select 1
@@ -84,6 +84,8 @@ create index if not exists olympiad_registrations_user_idx
   on public.olympiad_registrations (user_id);
 
 alter table public.olympiad_registrations enable row level security;
+revoke all on public.olympiad_registrations from public, anon, authenticated;
+grant select on public.olympiad_registrations to authenticated;
 
 -- Запись создаётся только функцией register_for_olympiad_profile.
 drop policy if exists "olympiad_registrations_select_own_or_admin" on public.olympiad_registrations;
@@ -107,7 +109,7 @@ create or replace function public.register_for_olympiad_profile(
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_uid    uuid := auth.uid();
@@ -116,14 +118,54 @@ declare
   v_first  text := nullif(trim(p_form->>'first_name'), '');
   v_middle text := nullif(trim(p_form->>'middle_name'), '');
   v_id     uuid;
+  v_birth_date date;
+  v_form jsonb;
+  v_text_fields constant text[] := array[
+    'last_name', 'first_name', 'middle_name', 'birth_date', 'country',
+    'federal_district', 'region', 'postal_code', 'locality_type', 'city',
+    'address', 'phone', 'class_course', 'school', 'school_address',
+    'school_phone', 'school_email', 'motivation', 'finance_interest', 'info_source',
+    'parent_full_name', 'parent_email', 'parent_phone', 'organizations',
+    'teacher_full_name', 'teacher_phone', 'teacher_email'
+  ];
+  v_bool_fields constant text[] := array['is_rural', 'is_orphan', 'has_disability'];
 begin
   if v_uid is null then
     raise exception 'not_authenticated';
   end if;
 
-  if v_last is null or v_first is null then
-    raise exception 'form_incomplete';
+  if jsonb_typeof(p_form) is distinct from 'object'
+    or octet_length(p_form::text) > 65536
+    or exists (
+      select 1 from unnest(v_text_fields) as f(key)
+      where jsonb_typeof(p_form->f.key) is distinct from 'string'
+        or length(btrim(p_form->>f.key)) not between 1 and 4000
+    )
+    or exists (
+      select 1 from unnest(v_bool_fields) as f(key)
+      where jsonb_typeof(p_form->f.key) is distinct from 'boolean'
+    )
+    or (p_form->>'postal_code') !~ '^[0-9]{6}$'
+    or (p_form->>'class_course') not in ('6-7', '8', '9', '10', '11')
+    or (p_form->>'birth_date') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  then
+    raise exception 'form_incomplete' using errcode = '22023';
   end if;
+
+  begin
+    v_birth_date := (p_form->>'birth_date')::date;
+  exception when invalid_datetime_format or datetime_field_overflow then
+    raise exception 'form_incomplete' using errcode = '22023';
+  end;
+  if v_birth_date < date '1950-01-01'
+    or v_birth_date > (now() at time zone 'Europe/Moscow')::date
+  then
+    raise exception 'form_incomplete' using errcode = '22023';
+  end if;
+
+  select jsonb_object_agg(f.key, p_form->f.key)
+  into v_form
+  from unnest(v_text_fields || v_bool_fields) as f(key);
 
   if not public.olympiad_profile_is_open(p_profile_id) then
     raise exception 'profile_closed';
@@ -151,7 +193,7 @@ begin
     last_name         = v_last,
     first_name        = v_first,
     middle_name       = v_middle,
-    birth_date        = nullif(p_form->>'birth_date', '')::date,
+    birth_date        = v_birth_date,
     country           = nullif(trim(p_form->>'country'), ''),
     federal_district  = nullif(trim(p_form->>'federal_district'), ''),
     region            = nullif(trim(p_form->>'region'), ''),
@@ -185,7 +227,7 @@ begin
       user_id, profile_id, email, last_name, first_name, middle_name, form_data
     )
     values (
-      v_uid, p_profile_id, v_email, v_last, v_first, v_middle, p_form
+      v_uid, p_profile_id, v_email, v_last, v_first, v_middle, v_form
     )
     returning id into v_id;
   exception when unique_violation then
@@ -196,5 +238,5 @@ begin
 end;
 $$;
 
-revoke all on function public.register_for_olympiad_profile(uuid, jsonb) from public;
+revoke all on function public.register_for_olympiad_profile(uuid, jsonb) from public, anon, authenticated;
 grant execute on function public.register_for_olympiad_profile(uuid, jsonb) to authenticated;

@@ -279,17 +279,178 @@ for (const existingFormat of [false, true]) {
       )
       await db.query("update profiles set role='user' where id=$1", [userId])
       await db.exec(await migration('20261117000000_harden_olympiads'))
+      await db.exec(await migration('20261121000000_question_banks'))
       await db.exec(await migration('20261123120000_olympiad_registration'))
-      const register = () =>
+      await db.exec(
+        await migration('20261123130000_restrict_legacy_public_rpcs'),
+      )
+      const importBank = (role, uid, bank) =>
         asRole(
           db,
-          'authenticated',
-          userId,
-          'select register_for_olympiad_profile($1, $2::jsonb) as id',
-          [eventId, JSON.stringify({ last_name: 'Иванов', first_name: 'Иван' })],
+          role,
+          uid,
+          "select upsert_question_bank($1, '8-9', $2::jsonb) as id",
+          [eventId, JSON.stringify(bank)],
         )
+      const bank = [
+        {
+          taskNumber: 1,
+          questionType: 'single_choice',
+          variants: [
+            {
+              rowNumber: 1,
+              questionText: 'Вопрос',
+              options: ['А', 'Б'],
+              correctAnswer: 1,
+              points: 1,
+            },
+          ],
+        },
+      ]
+      await assert.rejects(
+        () => importBank('anon', null, bank),
+        /permission denied/,
+      )
+      await assert.rejects(
+        () => importBank('authenticated', userId, bank),
+        /Только администратор/,
+      )
+      assert.ok((await importBank('authenticated', adminId, bank)).rows[0].id)
+      const ordinary = await asRole(
+        db,
+        'authenticated',
+        userId,
+        'select correct_answer from question_bank_variants',
+      )
+      assert.equal(ordinary.rows.length, 0)
+      const initial = await asRole(
+        db,
+        'authenticated',
+        adminId,
+        'select id, current_version from question_bank_variants',
+      )
+      assert.equal(initial.rows[0].current_version, 1)
+      await asRole(
+        db,
+        'authenticated',
+        adminId,
+        'update question_bank_variants set points=2 where id=$1',
+        [initial.rows[0].id],
+      )
+      const versions = await asRole(
+        db,
+        'authenticated',
+        adminId,
+        'select version_number from question_variant_versions order by version_number',
+      )
+      assert.deepEqual(
+        versions.rows.map((row) => row.version_number),
+        [1, 2],
+      )
+      const orphanId = '66666666-6666-4666-8666-666666666666'
+      await db.query(
+        "insert into auth.users (id, email) values ($1, 'orphan@example.test')",
+        [orphanId],
+      )
+      await db.query('delete from profiles where id=$1', [orphanId])
+      const release = await asRole(
+        db,
+        'anon',
+        null,
+        "select release_orphan_auth_email('orphan@example.test') as released",
+      )
+      assert.equal(release.rows[0].released, false)
+      assert.equal(
+        (await db.query('select id from auth.users where id=$1', [orphanId]))
+          .rows.length,
+        1,
+      )
+      await db.query("update profiles set city='Saved City' where id=$1", [
+        userId,
+      ])
+      const form = {
+        first_name: 'Иван',
+        last_name: 'Иванов',
+        middle_name: 'Иванович',
+        birth_date: '2010-01-01',
+        country: 'Российская Федерация',
+        federal_district: 'Центральный федеральный округ',
+        region: 'Москва',
+        postal_code: '123456',
+        locality_type: 'город',
+        city: 'Москва',
+        address: 'Учебная улица',
+        is_rural: false,
+        phone: '+79990000000',
+        class_course: '9',
+        school: 'Школа',
+        school_address: 'Учебная улица',
+        school_phone: '+79990000000',
+        school_email: 'school@example.test',
+        is_orphan: false,
+        has_disability: false,
+        motivation: 'Учёба',
+        finance_interest: 'Обучение',
+        info_source: 'Сайт',
+        parent_full_name: 'Иванова Анна',
+        parent_email: 'parent@example.test',
+        parent_phone: '+79990000000',
+        organizations: 'Нет',
+        teacher_full_name: 'Петров Иван',
+        teacher_phone: '+79990000000',
+        teacher_email: 'teacher@example.test',
+        ignored_key: 'not persisted',
+      }
+      const register = (data = form, role = 'authenticated', uid = userId) =>
+        asRole(
+          db,
+          role,
+          uid,
+          'select register_for_olympiad_profile($1, $2::jsonb) as id',
+          [eventId, JSON.stringify(data)],
+        )
+      await assert.rejects(
+        () => register({ last_name: 'Иванов', first_name: 'Иван' }),
+        /form_incomplete/,
+      )
+      await assert.rejects(
+        () => register({ ...form, birth_date: '2010-02-31' }),
+        /form_incomplete/,
+      )
+      await assert.rejects(
+        () => register(form, 'anon', null),
+        /permission denied/,
+      )
+      assert.equal(
+        (await db.query('select city from profiles where id=$1', [userId]))
+          .rows[0].city,
+        'Saved City',
+      )
       assert.ok((await register()).rows[0].id)
-      await assert.rejects(register, /already_registered/)
+      const own = await asRole(
+        db,
+        'authenticated',
+        userId,
+        'select form_data from olympiad_registrations',
+      )
+      assert.equal(own.rows[0].form_data.city, 'Москва')
+      assert.equal(Object.hasOwn(own.rows[0].form_data, 'ignored_key'), false)
+      assert.equal(
+        (
+          await asRole(
+            db,
+            'authenticated',
+            otherId,
+            'select id from olympiad_registrations',
+          )
+        ).rows.length,
+        0,
+      )
+      await assert.rejects(
+        () => asRole(db, 'anon', null, 'select id from olympiad_registrations'),
+        /permission denied/,
+      )
+      await assert.rejects(() => register(), /already_registered/)
       const {
         rows: [existing],
       } = await db.query('select * from olympiads where id=$1', [eventId])

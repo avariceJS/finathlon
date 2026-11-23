@@ -4,22 +4,35 @@ import type {
   ImportTaskInput,
   QuestionType,
 } from '../types'
-import type { ExcelParseResult, ImportValidationError, ParsedRow } from './types'
+import type {
+  ExcelParseResult,
+  ImportValidationError,
+  ParsedRow,
+} from './types'
 import { readXlsxRows } from './xlsx-reader'
 import { VALIDATORS } from './validators'
 
 const EXPECTED_HEADERS = [
-  '№', 'Задание', 'Балл', 'Тип', 'Вопрос',
-  'Вар.1', 'Вар.2', 'Вар.3', 'Вар.4', 'Вар.5', 'Вар.6',
+  '№',
+  'Задание',
+  'Балл',
+  'Тип',
+  'Вопрос',
+  'Вар.1',
+  'Вар.2',
+  'Вар.3',
+  'Вар.4',
+  'Вар.5',
+  'Вар.6',
   'Правильный ответ',
 ]
 
 const TYPE_MAP: Record<string, QuestionType> = {
   'один ответ': 'single_choice',
   'несколько ответов': 'multiple_choice',
-  'соответствие': 'matching',
+  соответствие: 'matching',
   'короткий ответ': 'short_answer',
-  'последовательность': 'sequence',
+  последовательность: 'sequence',
 }
 
 const EMPTY_STATS = {
@@ -44,7 +57,11 @@ function makeErrorResult(message: string): ExcelParseResult {
   }
 }
 
-function parseRow(cols: string[], excelLine: number, errors: ImportValidationError[]): ParsedRow | null {
+function parseRow(
+  cols: string[],
+  excelLine: number,
+  errors: ImportValidationError[],
+): ParsedRow | null {
   const rawRowNum = (cols.at(0) ?? '').trim()
   const rawTaskNum = (cols.at(1) ?? '').trim()
   const rawPoints = (cols.at(2) ?? '').trim().replace(',', '.')
@@ -55,27 +72,65 @@ function parseRow(cols: string[], excelLine: number, errors: ImportValidationErr
 
   // Валидация базовых полей
   const rowNum = Number(rawRowNum)
-  if (!rawRowNum || !Number.isInteger(rowNum) || rowNum <= 0) {
-    errors.push({ rowNumber: excelLine, field: '№', message: 'Номер вопроса должен быть положительным целым числом' })
+  if (
+    !rawRowNum ||
+    !Number.isInteger(rowNum) ||
+    rowNum <= 0 ||
+    rowNum > 2147483647
+  ) {
+    errors.push({
+      rowNumber: excelLine,
+      field: '№',
+      message: 'Номер вопроса должен быть положительным целым числом',
+    })
   }
 
   const taskNum = Number(rawTaskNum)
-  if (!rawTaskNum || !Number.isInteger(taskNum) || taskNum <= 0) {
-    errors.push({ rowNumber: excelLine, field: 'Задание', message: 'Номер задания должен быть положительным целым числом' })
+  if (
+    !rawTaskNum ||
+    !Number.isInteger(taskNum) ||
+    taskNum <= 0 ||
+    taskNum > 2147483647
+  ) {
+    errors.push({
+      rowNumber: excelLine,
+      field: 'Задание',
+      message: 'Номер задания должен быть положительным целым числом',
+    })
   }
 
   const points = Number(rawPoints)
-  if (!rawPoints || Number.isNaN(points) || points <= 0) {
-    errors.push({ rowNumber: excelLine, field: 'Балл', message: 'Балл должен быть положительным числом' })
+  if (
+    !/^\d+(?:\.\d{1,2})?$/.test(rawPoints) ||
+    points < 0.01 ||
+    points > 9999.99
+  ) {
+    errors.push({
+      rowNumber: excelLine,
+      field: 'Балл',
+      message:
+        'Балл должен быть от 0,01 до 9999,99, до двух знаков после запятой',
+    })
   }
 
-  const mappedType = TYPE_MAP[rawType.toLowerCase()]
+  const typeKey = rawType.toLowerCase()
+  const mappedType = Object.hasOwn(TYPE_MAP, typeKey)
+    ? TYPE_MAP[typeKey]
+    : undefined
   if (!mappedType) {
-    errors.push({ rowNumber: excelLine, field: 'Тип', message: `Неизвестный тип вопроса «${rawType || 'пусто'}»` })
+    errors.push({
+      rowNumber: excelLine,
+      field: 'Тип',
+      message: `Неизвестный тип вопроса «${rawType || 'пусто'}»`,
+    })
   }
 
   if (!questionText) {
-    errors.push({ rowNumber: excelLine, field: 'Вопрос', message: 'Текст вопроса не может быть пустым' })
+    errors.push({
+      rowNumber: excelLine,
+      field: 'Вопрос',
+      message: 'Текст вопроса не может быть пустым',
+    })
   }
 
   return {
@@ -116,7 +171,9 @@ function extractFilledVariants(
   return filled
 }
 
-export async function parseAndValidateExcelFile(file: File): Promise<ExcelParseResult> {
+export async function parseAndValidateExcelFile(
+  file: File,
+): Promise<ExcelParseResult> {
   const errors: ImportValidationError[] = []
   const stats = { ...EMPTY_STATS, byType: { ...EMPTY_STATS.byType } }
 
@@ -125,7 +182,9 @@ export async function parseAndValidateExcelFile(file: File): Promise<ExcelParseR
   try {
     rows = await readXlsxRows(file)
   } catch (err) {
-    return makeErrorResult(err instanceof Error ? err.message : 'Не удалось прочитать файл')
+    return makeErrorResult(
+      err instanceof Error ? err.message : 'Не удалось прочитать файл',
+    )
   }
 
   if (rows.length < 2) {
@@ -147,12 +206,15 @@ export async function parseAndValidateExcelFile(file: File): Promise<ExcelParseR
 
   // 3. Парсим строки данных
   const dataRows = rows.slice(1)
-  stats.totalRows = dataRows.length
+  stats.totalRows = dataRows.filter((row) => row.some(Boolean)).length
+  if (stats.totalRows === 0)
+    return makeErrorResult('Файл не содержит строк с вопросами')
 
   const seenRowNumbers = new Set<number>()
   const taskGroups = new Map<number, ImportTaskInput>()
 
   dataRows.forEach((cols, index) => {
+    if (!cols.some(Boolean)) return
     const excelLine = index + 2
     const row = parseRow(cols, excelLine, errors)
     if (!row) return
@@ -160,7 +222,11 @@ export async function parseAndValidateExcelFile(file: File): Promise<ExcelParseR
     // Проверка уникальности №
     if (row.rowNum !== null) {
       if (seenRowNumbers.has(row.rowNum)) {
-        errors.push({ rowNumber: excelLine, field: '№', message: `Дублирующийся номер вопроса №${row.rowNum}` })
+        errors.push({
+          rowNumber: excelLine,
+          field: '№',
+          message: `Дублирующийся номер вопроса №${row.rowNum}`,
+        })
       } else {
         seenRowNumbers.add(row.rowNum)
       }
@@ -169,7 +235,11 @@ export async function parseAndValidateExcelFile(file: File): Promise<ExcelParseR
     if (!row.questionType) return
 
     // 4. Извлекаем заполненные варианты
-    const filledVariants = extractFilledVariants(row.rawVariants, excelLine, errors)
+    const filledVariants = extractFilledVariants(
+      row.rawVariants,
+      excelLine,
+      errors,
+    )
 
     // 5. Вызываем нужный валидатор
     const validator = VALIDATORS[row.questionType]
@@ -209,7 +279,9 @@ export async function parseAndValidateExcelFile(file: File): Promise<ExcelParseR
   })
 
   // 7. Финальная статистика
-  const tasks = Array.from(taskGroups.values()).sort((a, b) => a.taskNumber - b.taskNumber)
+  const tasks = Array.from(taskGroups.values()).sort(
+    (a, b) => a.taskNumber - b.taskNumber,
+  )
   stats.tasksCount = tasks.length
   stats.variantsCount = tasks.reduce((sum, t) => sum + t.variants.length, 0)
 
