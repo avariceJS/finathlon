@@ -55,6 +55,9 @@ function humanizeRegistrationError(message: string): string {
   if (message.includes('profile_closed')) {
     return 'Регистрация по этому профилю сейчас закрыта.'
   }
+  if (message.includes('profile_full')) {
+    return 'Свободных мест на этом профиле больше нет.'
+  }
   if (message.includes('not_authenticated')) {
     return 'Сессия истекла. Войдите в личный кабинет и отправьте анкету ещё раз.'
   }

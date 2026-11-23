@@ -119,6 +119,7 @@ declare
   v_middle text := nullif(trim(p_form->>'middle_name'), '');
   v_id     uuid;
   v_birth_date date;
+  v_capacity integer;
   v_form jsonb;
   v_text_fields constant text[] := array[
     'last_name', 'first_name', 'middle_name', 'birth_date', 'country',
@@ -167,7 +168,13 @@ begin
   into v_form
   from unnest(v_text_fields || v_bool_fields) as f(key);
 
-  if not public.olympiad_profile_is_open(p_profile_id) then
+  -- Serialize signups and administrator edits for the same profile.
+  select o.max_participants into v_capacity
+  from public.olympiads o
+  where o.id = p_profile_id
+  for update;
+
+  if not found or not public.olympiad_profile_is_open(p_profile_id) then
     raise exception 'profile_closed';
   end if;
 
@@ -183,6 +190,12 @@ begin
       and (r.user_id = v_uid or lower(r.email) = v_email)
   ) then
     raise exception 'already_registered';
+  end if;
+
+  if v_capacity > 0 and (
+    select count(*) from public.olympiad_registrations r where r.profile_id = p_profile_id
+  ) >= v_capacity then
+    raise exception 'profile_full';
   end if;
 
   insert into public.profiles (id, email)

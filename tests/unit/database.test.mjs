@@ -458,6 +458,14 @@ for (const existingFormat of [false, true]) {
       assert.equal(existing.max_participants, -1) // no hidden destructive cleanup of historical data
       assert.equal(existing.format, existingFormat ? 'online' : 'offline')
       assert.equal(existing.registration_open, existingFormat ? true : null)
+      await db.query('update olympiads set max_participants=1 where id=$1', [
+        eventId,
+      ])
+      await assert.rejects(
+        () => register(form, 'authenticated', otherId),
+        /profile_full/,
+      )
+
       await assert.rejects(
         asRole(
           db,

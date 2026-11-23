@@ -470,3 +470,69 @@ test('new participant can register and open the cabinet after signup', async ({
     page.getByRole('link', { name: 'Статус регистрации' }),
   ).toBeVisible()
 })
+
+test('question bank Excel preview blocks invalid points and accepts a valid workbook', async ({
+  page,
+}) => {
+  await mockApi(page, { role: 'admin' })
+  await page.goto('/admin/question-banks')
+  await page.getByRole('button', { name: '+ Создать набор' }).click()
+  const dialog = page.getByRole('dialog')
+  const { default: writeWorkbook } = await import('write-excel-file/node')
+  const header = [
+    '№',
+    'Задание',
+    'Балл',
+    'Тип',
+    'Вопрос',
+    'Вар.1',
+    'Вар.2',
+    'Вар.3',
+    'Вар.4',
+    'Вар.5',
+    'Вар.6',
+    'Правильный ответ',
+  ]
+  const preview = async (points) => {
+    const buffer = await writeWorkbook(
+      [
+        header,
+        [
+          1,
+          1,
+          points,
+          'Один ответ',
+          'Что такое бюджет?',
+          'План',
+          'Письмо',
+          null,
+          null,
+          null,
+          null,
+          1,
+        ],
+      ],
+      { sheet: 'Вопросы' },
+    ).toBuffer()
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'questions.xlsx',
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer,
+    })
+    await dialog
+      .getByRole('button', { name: 'Проверить и открыть предпросмотр' })
+      .click()
+  }
+  const save = dialog.getByRole('button', { name: 'Сохранить набор вопросов' })
+  await preview('0,001')
+  await expect(
+    dialog.getByText(
+      'Балл должен быть от 0,01 до 9999,99, до двух знаков после запятой',
+    ),
+  ).toBeVisible()
+  await expect(save).toBeDisabled()
+  await preview(1.5)
+  await expect(dialog.getByText('Проверка успешно пройдена')).toBeVisible()
+  await expect(save).toBeEnabled()
+})
