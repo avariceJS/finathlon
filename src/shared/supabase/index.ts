@@ -19,4 +19,5 @@ export type {
   SiteSettingRow,
   OlympiadRow,
   OlympiadProfileRow,
+  OlympiadRegistrationRow,
 } from './types'

@@ -82,8 +82,8 @@ export function OlympiadsSection({ olympiads }: { olympiads: Olympiad[] }) {
                   </details>
                 ) : null}
                 {registration === 'open' ? (
-                  <Button to="/account/events" fullWidth>
-                    Личный кабинет
+                  <Button to={`/registration?profile=${olympiad.id}`} fullWidth>
+                    Зарегистрироваться
                   </Button>
                 ) : (
                   <p className={styles.notice}>

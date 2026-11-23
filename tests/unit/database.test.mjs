@@ -76,6 +76,17 @@ for (const existingFormat of [false, true]) {
       )
       await db.query("update profiles set role='user' where id=$1", [userId])
       await db.exec(await migration('20261117000000_harden_olympiads'))
+      await db.exec(await migration('20261123120000_olympiad_registration'))
+      const register = () =>
+        asRole(
+          db,
+          'authenticated',
+          userId,
+          'select register_for_olympiad_profile($1, $2::jsonb) as id',
+          [eventId, JSON.stringify({ last_name: 'Иванов', first_name: 'Иван' })],
+        )
+      assert.ok((await register()).rows[0].id)
+      await assert.rejects(register, /already_registered/)
       const {
         rows: [existing],
       } = await db.query('select * from olympiads where id=$1', [eventId])

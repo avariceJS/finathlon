@@ -24,6 +24,8 @@ import { EventsPage } from '@/pages/events'
 import { HomePage } from '@/pages/home'
 import { NewsDetailPage, NewsListPage } from '@/pages/news'
 import { PartnersPage } from '@/pages/partners'
+import { RegistrationPage } from '@/pages/registration'
+import { TestingPage } from '@/pages/testing'
 import { PrivacyPage, TermsPage } from '@/pages/legal'
 
 import { AdminRoute, ProtectedRoute } from './guards'
@@ -45,6 +47,16 @@ export function AppRouter() {
 
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+
+      <Route path="/registration" element={<RegistrationPage />} />
+      <Route
+        path="/testing/:profileId"
+        element={
+          <ProtectedRoute>
+            <TestingPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />

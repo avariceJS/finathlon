@@ -1,0 +1,137 @@
+.container {
+  max-width: 1024px;
+  padding-bottom: 72px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lead {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475467;
+}
+
+.block {
+  min-width: 0;
+  margin: 0;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+}
+
+.legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.legend + * {
+  clear: both;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475467;
+}
+
+.profileDates {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.accountHint {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.submit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+}
+
+.submitNote {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475467;
+  text-align: center;
+}
+
+.terms {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6b7280;
+  text-align: center;
+}
+
+.terms a {
+  color: var(--color-primary, #4f9cf9);
+}
+
+.terms a:hover {
+  text-decoration: underline;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.noticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.noticeList {
+  padding-left: 18px;
+}
+
+@media (max-width: 960px) {
+  .accountGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .block,
+  .submit {
+    padding: 18px 16px;
+  }
+
+  .accountGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .noticeActions > * {
+    width: 100%;
+  }
+}

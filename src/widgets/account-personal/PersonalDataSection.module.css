@@ -34,10 +34,28 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
   padding: 24px;
   background: #ffffff;
   border: 1px solid #eef2f7;
   border-radius: 18px;
+}
+
+.legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 2px;
+  padding: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .grid {
@@ -55,6 +73,10 @@
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .block {
+    padding: 18px 16px;
   }
 }
 
