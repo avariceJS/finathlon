@@ -23,3 +23,6 @@ export {
   deleteQuestionBank,
   getVariantHistory,
 } from './api'
+
+export { parseAndValidateExcelFile } from './excel'
+export type { ExcelParseResult, ImportValidationError } from './excel/types'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import type { Olympiad } from '@/entities/olympiad'
 import {
@@ -8,9 +8,12 @@ import {
   getQuestionBankById,
   getVariantHistory,
   listQuestionBanks,
+  parseAndValidateExcelFile,
   saveOrReplaceQuestionBank,
   updateQuestionVariant,
   type CorrectAnswerPayload,
+  type ExcelParseResult,
+  type ImportValidationError,
   type MatchingPair,
   type QuestionBankDetail,
   type QuestionBankGradeCategory,
@@ -19,11 +22,6 @@ import {
   type QuestionVariant,
   type QuestionVariantHistoryEntry,
 } from '@/entities/question-bank'
-import {
-  parseAndValidateExcelFile,
-  type ExcelParseResult,
-  type ImportValidationError,
-} from '@/features/AuthModal/question-bank-import/excelParser'
 import { olympiadsApi } from '@/shared/api'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
@@ -44,21 +42,20 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   sequence: 'Последовательность',
 }
 
-const GRADE_OPTIONS: Array<{ value: QuestionBankGradeCategory; label: string }> =
-  [
-    { value: '6-7', label: '6–7 классы' },
-    { value: '8-9', label: '8–9 классы' },
-    { value: '10-11', label: '10–11 классы' },
-  ]
+const GRADE_OPTIONS: Array<{
+  value: QuestionBankGradeCategory
+  label: string
+}> = [
+  { value: '6-7', label: '6–7 классы' },
+  { value: '8-9', label: '8–9 классы' },
+  { value: '10-11', label: '10–11 классы' },
+]
 
-type PageView =
-  | { kind: 'list' }
-  | { kind: 'detail'; bank: QuestionBankDetail }
+type PageView = { kind: 'list' } | { kind: 'detail'; bank: QuestionBankDetail }
 
 type ImportModalState =
   | { kind: 'closed' }
   | { kind: 'create' }
-
   | { kind: 'replace'; bank: QuestionBankSummary | QuestionBankDetail }
 
 type VariantEditState = {
@@ -96,9 +93,7 @@ function variantToEditState(
   questionType: QuestionType,
 ): VariantEditState {
   const isMatching = questionType === 'matching'
-  const textOptions = isMatching
-    ? []
-    : (variant.options as string[]).slice()
+  const textOptions = isMatching ? [] : (variant.options as string[]).slice()
   const matchingOptions = isMatching
     ? (variant.options as MatchingPair[]).map((p) => ({
         left: p.left,
@@ -107,7 +102,10 @@ function variantToEditState(
     : []
 
   let correctAnswerRaw = ''
-  if (questionType === 'single_choice' && typeof variant.correctAnswer === 'number') {
+  if (
+    questionType === 'single_choice' &&
+    typeof variant.correctAnswer === 'number'
+  ) {
     correctAnswerRaw = String(variant.correctAnswer)
   } else if (
     questionType === 'multiple_choice' &&
@@ -153,9 +151,7 @@ export function AdminQuestionBanksPage() {
   const [duplicateBankId, setDuplicateBankId] = useState<string | null>(null)
   const [confirmReplaceChecked, setConfirmReplaceChecked] = useState(false)
 
-  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(
-    new Set(),
-  )
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set())
   const [editState, setEditState] = useState<VariantEditState | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [isSavingVariant, setIsSavingVariant] = useState(false)
@@ -166,7 +162,7 @@ export function AdminQuestionBanksPage() {
   } | null>(null)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
-  const loadListAndOlympiads = async () => {
+  const loadListAndOlympiads = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -181,19 +177,21 @@ export function AdminQuestionBanksPage() {
       const list = olympiadsRes.data ?? []
       setOlympiads(list)
       const firstOlympiad = list.at(0)
-      if (!selectedOlympiadId && firstOlympiad) {
-        setSelectedOlympiadId(firstOlympiad.id)
+      if (firstOlympiad) {
+        setSelectedOlympiadId((current) =>
+          list.some((item) => item.id === current) ? current : firstOlympiad.id,
+        )
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     void loadListAndOlympiads()
-  }, [])
+  }, [loadListAndOlympiads])
 
   const openBankDetail = async (bankId: string) => {
     setIsLoading(true)
@@ -218,9 +216,7 @@ export function AdminQuestionBanksPage() {
     setImportModal({ kind: 'create' })
   }
 
-  const openReplaceModal = (
-    bank: QuestionBankSummary | QuestionBankDetail,
-  ) => {
+  const openReplaceModal = (bank: QuestionBankSummary | QuestionBankDetail) => {
     setSelectedOlympiadId(bank.olympiadId)
     setSelectedGrade(bank.gradeCategory)
     setSelectedFile(null)
@@ -241,12 +237,21 @@ export function AdminQuestionBanksPage() {
     setImportError(null)
     setDuplicateBankId(null)
 
-    if (importModal.kind === 'create') {
-      if (!selectedOlympiadId) {
-        setImportError('Выберите профиль олимпиады')
-        return
-      }
-      try {
+    if (isParsing || isSavingBank || importModal.kind === 'closed') return
+    if (!selectedFile) {
+      setImportError('Выберите Excel-файл (.xlsx) для проверки')
+      return
+    }
+    if (importModal.kind === 'create' && !selectedOlympiadId) {
+      setImportError('Выберите профиль олимпиады')
+      return
+    }
+
+    setParseResult(null)
+    setConfirmReplaceChecked(false)
+    setIsParsing(true)
+    try {
+      if (importModal.kind === 'create') {
         const existing = await findExistingQuestionBank(
           selectedOlympiadId,
           selectedGrade,
@@ -258,28 +263,24 @@ export function AdminQuestionBanksPage() {
           )
           return
         }
-      } catch (err) {
-        setImportError(err instanceof Error ? err.message : String(err))
-        return
       }
-    }
-
-    if (!selectedFile) {
-      setImportError('Выберите Excel-файл (.xlsx) для проверки')
-      return
-    }
-
-    setIsParsing(true)
-    try {
-      const result = await parseAndValidateExcelFile(selectedFile)
-      setParseResult(result)
+      setParseResult(await parseAndValidateExcelFile(selectedFile))
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsParsing(false)
     }
   }
 
   const handleSaveImportedBank = async () => {
-    if (!parseResult || !parseResult.isValid || isSavingBank) return
+    if (
+      !parseResult ||
+      !parseResult.isValid ||
+      isParsing ||
+      isSavingBank ||
+      importModal.kind === 'closed'
+    )
+      return
     const isReplace = importModal.kind === 'replace'
     if (isReplace && !confirmReplaceChecked) {
       setImportError('Подтвердите замену существующего набора вопросов')
@@ -366,8 +367,15 @@ export function AdminQuestionBanksPage() {
     }
 
     const parsedPoints = Number(editState.points.replace(',', '.'))
-    if (Number.isNaN(parsedPoints) || parsedPoints <= 0) {
-      setEditError('Балл должен быть положительным числом')
+    if (
+      !Number.isFinite(parsedPoints) ||
+      parsedPoints < 0.01 ||
+      parsedPoints > 9999.99 ||
+      Math.abs(parsedPoints * 100 - Math.round(parsedPoints * 100)) > 1e-8
+    ) {
+      setEditError(
+        'Балл должен быть от 0,01 до 9999,99, до двух знаков после запятой',
+      )
       return
     }
 
@@ -379,7 +387,9 @@ export function AdminQuestionBanksPage() {
         .map((p) => ({ left: p.left.trim(), right: p.right.trim() }))
         .filter((p) => p.left || p.right)
       if (cleaned.length < 2 || cleaned.some((p) => !p.left || !p.right)) {
-        setEditError('Для соответствия нужно минимум 2 полностью заполненные пары')
+        setEditError(
+          'Для соответствия нужно минимум 2 полностью заполненные пары',
+        )
         return
       }
       options = cleaned
@@ -406,7 +416,9 @@ export function AdminQuestionBanksPage() {
       if (editState.questionType === 'single_choice') {
         const ans = Number(editState.correctAnswerRaw.trim())
         if (!Number.isInteger(ans) || ans < 1 || ans > cleaned.length) {
-          setEditError(`Правильный ответ должен быть числом от 1 до ${cleaned.length}`)
+          setEditError(
+            `Правильный ответ должен быть числом от 1 до ${cleaned.length}`,
+          )
           return
         }
         correctAnswer = ans
@@ -418,7 +430,9 @@ export function AdminQuestionBanksPage() {
         const nums = parts.map((p) => Number(p))
         if (
           parts.length === 0 ||
-          nums.some((n) => !Number.isInteger(n) || n < 1 || n > cleaned.length) ||
+          nums.some(
+            (n) => !Number.isInteger(n) || n < 1 || n > cleaned.length,
+          ) ||
           new Set(nums).size !== nums.length
         ) {
           setEditError(
@@ -476,7 +490,8 @@ export function AdminQuestionBanksPage() {
         : ''
       return (
         <div className={styles.muted}>
-          Правильный ответ: <strong className={styles.optionCorrect}>{answers}</strong>
+          Правильный ответ:{' '}
+          <strong className={styles.optionCorrect}>{answers}</strong>
         </div>
       )
     }
@@ -519,11 +534,7 @@ export function AdminQuestionBanksPage() {
 
   return (
     <AdminLayout
-      title={
-        view.kind === 'detail'
-          ? view.bank.displayTitle
-          : 'Набор вопросов'
-      }
+      title={view.kind === 'detail' ? view.bank.displayTitle : 'Набор вопросов'}
       description={
         view.kind === 'detail'
           ? `Заданий: ${view.bank.tasksCount} · Всего вопросов: ${view.bank.variantsCount}`
@@ -653,7 +664,9 @@ export function AdminQuestionBanksPage() {
                         <div className={styles.variantTop}>
                           <div>
                             <span className={styles.muted}>
-                              Вопрос №{variant.rowNumber} · Балл: {variant.points} · Версия: v{variant.currentVersion}
+                              Вопрос №{variant.rowNumber} · Балл:{' '}
+                              {variant.points} · Версия: v
+                              {variant.currentVersion}
                             </span>
                             <div className={styles.variantText}>
                               {variant.questionText}
@@ -665,7 +678,10 @@ export function AdminQuestionBanksPage() {
                               variant="secondary"
                               onClick={() =>
                                 setEditState(
-                                  variantToEditState(variant, task.questionType),
+                                  variantToEditState(
+                                    variant,
+                                    task.questionType,
+                                  ),
                                 )
                               }
                             >
@@ -691,10 +707,7 @@ export function AdminQuestionBanksPage() {
           })}
         </div>
       )}
-      <Modal
-        isOpen={importModal.kind !== 'closed'}
-        onClose={closeImportModal}
-      >
+      <Modal isOpen={importModal.kind !== 'closed'} onClose={closeImportModal}>
         <div className={styles.formSection}>
           <h2>
             {importModal.kind === 'replace'
@@ -728,6 +741,7 @@ export function AdminQuestionBanksPage() {
               <Select
                 label="Профиль и сезон олимпиады"
                 value={selectedOlympiadId}
+                disabled={isParsing || isSavingBank}
                 onChange={(e) => {
                   setSelectedOlympiadId(e.target.value)
                   setParseResult(null)
@@ -743,6 +757,7 @@ export function AdminQuestionBanksPage() {
               <Select
                 label="Категория классов"
                 value={selectedGrade}
+                disabled={isParsing || isSavingBank}
                 onChange={(e) => {
                   setSelectedGrade(e.target.value as QuestionBankGradeCategory)
                   setParseResult(null)
@@ -762,6 +777,7 @@ export function AdminQuestionBanksPage() {
               id="excel-upload-input"
               type="file"
               accept=".xlsx"
+              disabled={isParsing || isSavingBank}
               onChange={(e) => {
                 const file = e.target.files?.item(0) ?? null
                 setSelectedFile(file)
@@ -770,7 +786,8 @@ export function AdminQuestionBanksPage() {
               }}
             />
             <span className={styles.muted}>
-              Ожидаемые колонки: №, Задание, Балл, Тип, Вопрос, Вар.1–Вар.6, Правильный ответ
+              Ожидаемые колонки: №, Задание, Балл, Тип, Вопрос, Вар.1–Вар.6,
+              Правильный ответ
             </span>
           </div>
 
@@ -833,7 +850,8 @@ export function AdminQuestionBanksPage() {
                             <td>{err.field}</td>
                             <td>{err.message}</td>
                           </tr>
-                      ))}
+                        ),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -855,10 +873,12 @@ export function AdminQuestionBanksPage() {
                   <input
                     type="checkbox"
                     checked={confirmReplaceChecked}
+                    disabled={isParsing || isSavingBank}
                     onChange={(e) => setConfirmReplaceChecked(e.target.checked)}
                   />
                   <span>
-                    Подтверждаю полную замену текущих вопросов в этом наборе на вопросы из нового файла
+                    Подтверждаю замену вопросов из файла. История версий
+                    заменённых вопросов будет удалена.
                   </span>
                 </label>
               ) : null}
@@ -875,7 +895,7 @@ export function AdminQuestionBanksPage() {
             </Button>
             <Button
               onClick={() => void handleSaveImportedBank()}
-              disabled={!parseResult?.isValid || isSavingBank}
+              disabled={!parseResult?.isValid || isParsing || isSavingBank}
             >
               {isSavingBank
                 ? 'Сохраняем...'
@@ -891,7 +911,7 @@ export function AdminQuestionBanksPage() {
         onClose={() => {
           if (!isSavingVariant) setEditState(null)
         }}
-        >
+      >
         {editState ? (
           <form
             className={styles.formSection}
@@ -1011,7 +1031,7 @@ export function AdminQuestionBanksPage() {
         ) : null}
       </Modal>
 
-     <Modal
+      <Modal
         isOpen={historyModal !== null}
         onClose={() => setHistoryModal(null)}
       >
@@ -1032,7 +1052,10 @@ export function AdminQuestionBanksPage() {
                   <strong>
                     Версия v{entry.versionFrom} → v{entry.versionTo}
                   </strong>{' '}
-                  · <span className={styles.muted}>{formatDate(entry.createdAt)}</span>
+                  ·{' '}
+                  <span className={styles.muted}>
+                    {formatDate(entry.createdAt)}
+                  </span>
                 </div>
                 <div className={styles.muted}>
                   Изменил: {entry.changedBy ?? 'Администратор'}

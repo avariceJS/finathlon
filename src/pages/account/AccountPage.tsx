@@ -13,6 +13,7 @@ import { AccountBanner } from '@/widgets/account-banner'
 import { AchievementsSection } from '@/widgets/account-achievements'
 import { EventsSection } from '@/widgets/account-events'
 import { NotificationsSection } from '@/widgets/account-notifications'
+import { OlympiadsSection } from '@/widgets/account-olympiads'
 import { PersonalDataSection } from '@/widgets/account-personal'
 import { AccountSidebar } from '@/widgets/account-sidebar'
 import { Footer } from '@/widgets/footer'
@@ -23,6 +24,7 @@ import styles from './AccountPage.module.css'
 
 const VALID_SECTIONS: AccountSectionKey[] = [
   'personal',
+  'olympiads',
   'events',
   'achievements',
   'notifications',
@@ -82,6 +84,9 @@ export function AccountPage() {
                       profile={profile}
                       email={user?.email ?? null}
                     />
+                  ) : null}
+                  {activeSection === 'olympiads' ? (
+                    <OlympiadsSection registrations={data.registrations} />
                   ) : null}
                   {activeSection === 'events' ? (
                     <EventsSection events={data.events} />

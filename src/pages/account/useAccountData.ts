@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import type { OlympiadRegistration } from '@/entities/olympiad'
 import type {
   UserAchievement,
   UserEvent,
   UserNotification,
 } from '@/entities/profile'
-import { profileApi } from '@/shared/api'
+import { olympiadApi, profileApi } from '@/shared/api'
 import { useAuth } from '@/shared/auth'
 
 export type AccountData = {
   events: UserEvent[]
   achievements: UserAchievement[]
   notifications: UserNotification[]
+  registrations: OlympiadRegistration[]
 }
 
 const EMPTY: AccountData = {
   events: [],
   achievements: [],
   notifications: [],
+  registrations: [],
 }
 
 export function useAccountData() {
@@ -36,18 +39,24 @@ export function useAccountData() {
 
     setIsLoading(true)
     setError(null)
-    const [eventsRes, achievementsRes, notificationsRes] = await Promise.all([
-      profileApi.listUserEvents(userId),
-      profileApi.listUserAchievements(userId),
-      profileApi.listUserNotifications(userId),
-    ])
+    const [eventsRes, achievementsRes, notificationsRes, registrationsRes] =
+      await Promise.all([
+        profileApi.listUserEvents(userId),
+        profileApi.listUserAchievements(userId),
+        profileApi.listUserNotifications(userId),
+        olympiadApi.listMyRegistrations(userId),
+      ])
     setData({
       events: eventsRes.data ?? [],
       achievements: achievementsRes.data ?? [],
       notifications: notificationsRes.data ?? [],
+      registrations: registrationsRes.data ?? [],
     })
     setError(
-      eventsRes.error ?? achievementsRes.error ?? notificationsRes.error,
+      eventsRes.error ??
+        achievementsRes.error ??
+        notificationsRes.error ??
+        registrationsRes.error,
     )
     setIsLoading(false)
   }, [userId])
