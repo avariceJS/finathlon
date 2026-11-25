@@ -187,9 +187,10 @@ export type DocumentRow = {
   title: string
   description: string | null
   category: string
-  section_id: string | null 
+  section_id: string | null
   file_url: string | null
   file_name: string | null
+  file_path: string | null
   source: 'olympiad' | 'rsosh' | null
   sort_order: number
   is_published: boolean

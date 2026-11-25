@@ -15,7 +15,7 @@
     "db:link": "supabase link --project-ref obwmhbpkkcxaimmbfogg",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
-    "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:unit": "node --test tests/unit/*.test.mjs tests/question-bank-qa/*.test.mjs",
     "typecheck:api": "tsc --noEmit --strict --target ES2023 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck api/admin-create-user.ts"
   },
   "dependencies": {

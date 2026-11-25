@@ -58,7 +58,7 @@ export function Header({ variant = 'public' }: HeaderProps) {
             aria-label="Основная навигация"
           >
             {SITE_NAVIGATION.map((item) => {
-              if (item.label === 'Документы') {
+              if (item.to === '/documents') {
                 return <HeaderDropdown key={item.to} onNavigate={closeMobile} />
               }
               return (
@@ -96,7 +96,11 @@ export function Header({ variant = 'public' }: HeaderProps) {
                   title={displayName}
                 >
                   <span className={styles.profileAvatar}>
-                    {initials(profile?.firstName, profile?.lastName, user.email)}
+                    {initials(
+                      profile?.firstName,
+                      profile?.lastName,
+                      user.email,
+                    )}
                   </span>
                   <span className={styles.profileName}>{displayName}</span>
                 </Link>
@@ -132,25 +136,18 @@ export function Header({ variant = 'public' }: HeaderProps) {
         {isMobileOpen ? (
           <div className={styles.mobilePanel}>
             <Container className={styles.mobileInner}>
-              <nav className={styles.mobileNav} aria-label="Мобильная навигация">
+              <nav
+                className={styles.mobileNav}
+                aria-label="Мобильная навигация"
+              >
                 {SITE_NAVIGATION.map((item) => {
-                  if (item.label === 'Документы') {
+                  if (item.to === '/documents') {
                     return (
-                      <div key={item.to} className={styles.mobileDropdown}>
-                        <span className={styles.mobileLink} style={{ fontWeight: 600 }}>Документы</span>
-                        <div style={{ paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {/* Простой вывод корневых разделов для мобильной версии */}
-                          {/* В мобильной версии для 3 уровня лучше использовать вложенный аккордеон, но пока оставим так */}
-                          <NavLink
-                            to="/documents"
-                            className={styles.mobileLink}
-                            style={{ fontSize: '14px', padding: '8px 14px' }}
-                            onClick={closeMobile}
-                          >
-                            Все документы
-                          </NavLink>
-                        </div>
-                      </div>
+                      <HeaderDropdown
+                        key={item.to}
+                        onNavigate={closeMobile}
+                        mobile
+                      />
                     )
                   }
                   return (
@@ -175,7 +172,11 @@ export function Header({ variant = 'public' }: HeaderProps) {
               <div className={styles.mobileActions}>
                 {user ? (
                   <>
-                    <Button to="/account/personal" onClick={closeMobile} fullWidth>
+                    <Button
+                      to="/account/personal"
+                      onClick={closeMobile}
+                      fullWidth
+                    >
                       Личный кабинет
                     </Button>
                     {isAdmin ? (
@@ -188,11 +189,7 @@ export function Header({ variant = 'public' }: HeaderProps) {
                         Админ-панель
                       </Button>
                     ) : null}
-                    <Button
-                      variant="ghost"
-                      onClick={handleSignOut}
-                      fullWidth
-                    >
+                    <Button variant="ghost" onClick={handleSignOut} fullWidth>
                       Выйти
                     </Button>
                   </>
@@ -214,10 +211,7 @@ export function Header({ variant = 'public' }: HeaderProps) {
       </header>
 
       {isAuthOpen ? (
-        <AuthModal
-          isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
-        />
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       ) : null}
     </>
   )

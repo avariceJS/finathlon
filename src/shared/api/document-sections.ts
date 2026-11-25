@@ -82,7 +82,9 @@ export async function updateDocumentSection(
   return ok(mapSection(data))
 }
 
-export async function deleteDocumentSection(id: string): Promise<ApiResult<true>> {
+export async function deleteDocumentSection(
+  id: string,
+): Promise<ApiResult<true>> {
   const { error } = await supabase
     .from('document_sections')
     .delete()
