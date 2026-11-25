@@ -171,12 +171,26 @@ export type CouncilMemberRow = {
   updated_at: string
 }
 
+export type DocumentSectionRow = {
+  id: string
+  parent_id: string | null
+  title: string
+  slug: string
+  sort_order: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type DocumentRow = {
   id: string
   title: string
   description: string | null
   category: string
+  section_id: string | null 
   file_url: string | null
+  file_name: string | null
+  source: 'olympiad' | 'rsosh' | null
   sort_order: number
   is_published: boolean
   created_at: string
@@ -256,6 +270,11 @@ type Tbl<Row, Insert, Update> = {
 export type Database = {
   public: {
     Tables: {
+      document_sections: Tbl<
+        DocumentSectionRow,
+        Partial<DocumentSectionRow> & { title: string; slug: string },
+        Partial<DocumentSectionRow>
+      >
       demo_questions: Tbl<
         DemoQuestion,
         DemoQuestion,

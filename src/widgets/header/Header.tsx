@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/button/Button'
 import { Container } from '@/shared/ui/container/Container'
 import { Logo } from '@/shared/ui/logo/Logo'
 
+import { HeaderDropdown } from './HeaderDropdown'
 import styles from './Header.module.css'
 
 type HeaderProps = {
@@ -56,19 +57,24 @@ export function Header({ variant = 'public' }: HeaderProps) {
             className={cx(styles.nav, isMobileOpen && styles.navOpen)}
             aria-label="Основная навигация"
           >
-            {SITE_NAVIGATION.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={closeMobile}
-                className={({ isActive }) =>
-                  cx(styles.navLink, isActive && styles.navLinkActive)
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {SITE_NAVIGATION.map((item) => {
+              if (item.label === 'Документы') {
+                return <HeaderDropdown key={item.to} onNavigate={closeMobile} />
+              }
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={closeMobile}
+                  className={({ isActive }) =>
+                    cx(styles.navLink, isActive && styles.navLinkActive)
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              )
+            })}
           </nav>
 
           <div className={styles.right}>
@@ -127,22 +133,43 @@ export function Header({ variant = 'public' }: HeaderProps) {
           <div className={styles.mobilePanel}>
             <Container className={styles.mobileInner}>
               <nav className={styles.mobileNav} aria-label="Мобильная навигация">
-                {SITE_NAVIGATION.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    onClick={closeMobile}
-                    className={({ isActive }) =>
-                      cx(
-                        styles.mobileLink,
-                        isActive && styles.mobileLinkActive,
-                      )
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
+                {SITE_NAVIGATION.map((item) => {
+                  if (item.label === 'Документы') {
+                    return (
+                      <div key={item.to} className={styles.mobileDropdown}>
+                        <span className={styles.mobileLink} style={{ fontWeight: 600 }}>Документы</span>
+                        <div style={{ paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {/* Простой вывод корневых разделов для мобильной версии */}
+                          {/* В мобильной версии для 3 уровня лучше использовать вложенный аккордеон, но пока оставим так */}
+                          <NavLink
+                            to="/documents"
+                            className={styles.mobileLink}
+                            style={{ fontSize: '14px', padding: '8px 14px' }}
+                            onClick={closeMobile}
+                          >
+                            Все документы
+                          </NavLink>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.to === '/'}
+                      onClick={closeMobile}
+                      className={({ isActive }) =>
+                        cx(
+                          styles.mobileLink,
+                          isActive && styles.mobileLinkActive,
+                        )
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  )
+                })}
               </nav>
 
               <div className={styles.mobileActions}>

@@ -15,6 +15,7 @@ export type {
   PartnerRow,
   CouncilMemberRow,
   DocumentRow,
+  DocumentSectionRow,
   FaqRow,
   SiteSettingRow,
   OlympiadRow,
