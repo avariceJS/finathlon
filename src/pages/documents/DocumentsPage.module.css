@@ -50,6 +50,97 @@
   color: #94a3b8;
 }
 
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 64px;
+}
+
+.sectionBlock {
+  border: 1px solid #e2e8f0; /* Более заметная рамка */
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02); /* Легкая тень для объема */
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 16px 20px;
+  background: #f8fafc; /* Легкий серый фон для заголовка */
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sectionHeader:hover {
+  background: #f1f5f9;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 800; /* Жирный шрифт */
+  color: #0f172a; /* Темный цвет, контрастный */
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggleIcon {
+  font-size: 20px;
+  font-weight: 400;
+  color: #64748b;
+  line-height: 1;
+}
+
+.sectionContent {
+  padding: 16px 20px 20px;
+  background: #ffffff;
+}
+
+.docsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.docCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.docCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -8px rgba(15, 23, 42, 0.12);
+}
+
+.docTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.docDesc {
+  font-size: 13px;
+  color: #475467;
+  flex: 1;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;

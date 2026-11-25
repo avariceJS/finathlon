@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router'
 import type { DocumentItem } from '@/entities/document'
-import {
-  documentsApi,
-  siteSettingsApi,
-  type ContactsSetting,
-} from '@/shared/api'
+import { documentsApi, documentSectionsApi, siteSettingsApi, type ContactsSetting, type DocumentSection } from '@/shared/api'
 import { DEFAULT_CONTACTS_SETTING } from '@/shared/api/site-settings'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
@@ -16,58 +12,149 @@ import { PageLayout } from '@/shared/ui/page-layout/PageLayout'
 import { Spinner } from '@/shared/ui/spinner/Spinner'
 import { Footer } from '@/widgets/footer'
 import { Header } from '@/widgets/header'
-
 import styles from './DocumentsPage.module.css'
 
-const CATEGORY_LABELS: Record<string, string> = {
-  general: 'Общие документы',
-  regulations: 'Положения и регламенты',
-  guides: 'Методические материалы',
-  reports: 'Отчётность',
-}
-
 export function DocumentsPage() {
+  const { hash } = useLocation()
   const [documents, setDocuments] = useState<DocumentItem[]>([])
-  const [contacts, setContacts] = useState<ContactsSetting>(
-    DEFAULT_CONTACTS_SETTING,
-  )
+  const [sections, setSections] = useState<DocumentSection[]>([])
+  const [contacts, setContacts] = useState<ContactsSetting>(DEFAULT_CONTACTS_SETTING)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     let cancelled = false
-
     Promise.all([
       documentsApi.listDocuments(),
+      documentSectionsApi.listDocumentSections(),
       siteSettingsApi.fetchSiteSettings(),
-    ])
-      .then(([docsRes, settingsRes]) => {
-        if (cancelled) return
-        setDocuments(docsRes.data ?? [])
-        if (settingsRes.data) setContacts(settingsRes.data.contacts)
-        setError(docsRes.error ?? settingsRes.error)
-        setIsLoading(false)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : String(err))
-        setIsLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
+    ]).then(([docsRes, sectionsRes, settingsRes]) => {
+      if (cancelled) return
+      setDocuments(docsRes.data ?? [])
+      setSections(sectionsRes.data ?? [])
+      if (settingsRes.data) setContacts(settingsRes.data.contacts)
+      setError(docsRes.error ?? sectionsRes.error ?? settingsRes.error)
+      setIsLoading(false)
+    })
+    return () => { cancelled = true }
   }, [])
 
-  const grouped = useMemo(() => {
-    const byCategory = new Map<string, DocumentItem[]>()
-    for (const item of documents) {
-      const list = byCategory.get(item.category) ?? []
-      list.push(item)
-      byCategory.set(item.category, list)
+  useEffect(() => {
+  if (!hash || sections.length === 0) return
+
+  const targetSlug = hash.replace('#', '')
+  const targetSection = sections.find(s => s.slug === targetSlug)
+  
+  if (targetSection) {
+    const sectionsToOpen: Record<string, boolean> = {}
+    
+    // Рекурсивно открываем всех родителей (вверх по дереву)
+    const openAncestors = (id: string) => {
+      const current = sections.find(s => s.id === id)
+      if (!current) return
+      
+      // Открываем текущий раздел
+      sectionsToOpen[current.id] = true
+      
+      // Если у него есть родитель, идем выше
+      if (current.parentId) {
+        openAncestors(current.parentId)
+      }
     }
-    return Array.from(byCategory.entries())
-  }, [documents])
+    
+    openAncestors(targetSection.id)
+    setOpenSections(prev => ({ ...prev, ...sectionsToOpen }))
+    
+    // Прокрутка к элементу (с учетом высоты шапки)
+    setTimeout(() => {
+      const element = document.getElementById(`section-${targetSection.slug}`)
+      if (element) {
+        const headerOffset = 100; // Высота шапки + отступ
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+      }
+    }, 100)
+  }
+}, [hash, sections])
+
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const rootSections = sections.filter(s => !s.parentId)
+  
+  const renderSection = (section: DocumentSection, level = 0) => {
+    const childSections = sections.filter(s => s.parentId === section.id)
+    const sectionDocs = documents.filter(d => d.sectionId === section.id)
+    const hasContent = childSections.length > 0 || sectionDocs.length > 0
+    const isOpen = openSections[section.id] || false
+
+    return (
+      <div 
+        key={section.id} 
+        id={`section-${section.slug}`} 
+        className={styles.sectionBlock} 
+        style={{ 
+        marginLeft: level > 0 ? '24px' : '0', 
+        marginTop: level > 0 ? '8px' : '0',
+        // Добавляем цветную полоску слева для заголовков, чтобы они не сливались
+        borderLeft: level > 0 ? '3px solid #4f9cf9' : 'none',
+        paddingLeft: level > 0 ? '12px' : '0'
+      }}
+      >
+        <button 
+          className={styles.sectionHeader} 
+          onClick={() => hasContent && toggleSection(section.id)}
+        >
+          <h3 className={styles.sectionTitle}>
+            {section.title}
+          </h3>
+          {hasContent && <span className={styles.toggleIcon}>{isOpen ? '−' : '+'}</span>}
+        </button>
+        
+        {isOpen && (
+          <div className={styles.sectionContent}>
+            {sectionDocs.length > 0 && (
+              <div className={styles.docsGrid}>
+                {sectionDocs.map(doc => {
+                  let cardStyle: React.CSSProperties = {}
+                  let badge = null
+                  
+                  if (doc.source === 'olympiad') {
+                    cardStyle = { borderLeft: '4px solid #2563eb' }
+                    badge = <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Финатлон</span>
+                  } else if (doc.source === 'rsosh') {
+                    cardStyle = { borderLeft: '4px solid #059669' }
+                    badge = <span style={{ fontSize: '11px', color: '#059669', fontWeight: 600, marginBottom: '4px', display: 'block' }}>РСОШ</span>
+                  }
+
+                  return (
+                    <article key={doc.id} className={styles.docCard} style={cardStyle}>
+                      {badge}
+                      <h4 className={styles.docTitle}>{doc.title}</h4>
+                      {doc.description && <p className={styles.docDesc}>{doc.description}</p>}
+                      {doc.fileUrl ? (
+                        <div style={{ marginTop: 'auto' }}>
+                          <Button href={doc.fileUrl} target="_blank" variant="ghost" size="sm">
+                            Открыть
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className={styles.muted}>Файл скоро появится</span>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+            {childSections.map(child => renderSection(child, level + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <PageLayout header={<Header />} footer={<Footer contacts={contacts} />}>
@@ -76,49 +163,15 @@ export function DocumentsPage() {
         title="Документация Финатлона"
         description="Положения, регламенты и методические материалы для участников и наставников."
       />
-
       <Container>
-        {error ? (
-          <Alert variant="error" title="Ошибка">
-            {error}
-          </Alert>
-        ) : null}
-
+        {error && <Alert variant="error" title="Ошибка">{error}</Alert>}
         {isLoading ? (
           <Spinner label="Загружаем документы..." />
-        ) : documents.length === 0 ? (
-          <EmptyState
-            title="Документы появятся скоро"
-            description="Администраторы добавят документы и они будут доступны для скачивания."
-          />
+        ) : documents.length === 0 && sections.length === 0 ? (
+          <EmptyState title="Документы появятся скоро" description="Администраторы добавят документы и они будут доступны для скачивания." />
         ) : (
-          <div className={styles.groups}>
-            {grouped.map(([category, items]) => (
-              <section key={category} className={styles.group}>
-                <h2 className={styles.groupTitle}>
-                  {CATEGORY_LABELS[category] ?? category}
-                </h2>
-                <div className={styles.grid}>
-                  {items.map((doc) => (
-                    <article key={doc.id} className={styles.card}>
-                      <h3 className={styles.cardTitle}>{doc.title}</h3>
-                      {doc.description ? (
-                        <p className={styles.cardDescription}>
-                          {doc.description}
-                        </p>
-                      ) : null}
-                      {doc.fileUrl ? (
-                        <Button href={doc.fileUrl} variant="ghost" size="sm">
-                          Скачать
-                        </Button>
-                      ) : (
-                        <span className={styles.muted}>Файл скоро появится</span>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
+          <div className={styles.tree}>
+            {rootSections.map(root => renderSection(root))}
           </div>
         )}
       </Container>
