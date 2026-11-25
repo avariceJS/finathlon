@@ -127,6 +127,7 @@ export function AdminDocumentsPage() {
 
   // --- Обработчики для документов ---
   const openCreateDoc = () => {
+    if (isSaving) return
     setFormError(null)
     setSelectedFile(null)
     setDocForm(EMPTY_DOC)
@@ -134,6 +135,7 @@ export function AdminDocumentsPage() {
   }
 
   const openEditDoc = (doc: DocumentItem) => {
+    if (isSaving) return
     setFormError(null)
     setSelectedFile(null)
     setDocForm({
@@ -230,12 +232,14 @@ export function AdminDocumentsPage() {
   }
 
   const openCreateSection = () => {
+    if (isSaving) return
     setFormError(null)
     setSectionForm(EMPTY_SECTION)
     setMode({ kind: 'create-section' })
   }
 
   const openEditSection = (section: DocumentSection) => {
+    if (isSaving) return
     setFormError(null)
     setSectionForm({
       title: section.title,
@@ -295,6 +299,7 @@ export function AdminDocumentsPage() {
   }
 
   const handleDeleteDoc = async (doc: DocumentItem) => {
+    if (isSaving) return
     if (!confirm(`Удалить «${doc.title}»?`)) return
     const result = await documentsApi.deleteDocument(doc.id)
     if (result.error) setError(result.error)
@@ -302,6 +307,7 @@ export function AdminDocumentsPage() {
   }
 
   const handleDeleteSection = async (section: DocumentSection) => {
+    if (isSaving) return
     if (
       sections.some((item) => item.parentId === section.id) ||
       docs.some((doc) => doc.sectionId === section.id)
