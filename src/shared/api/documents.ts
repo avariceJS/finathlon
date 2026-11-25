@@ -1,7 +1,6 @@
 import { supabase } from '@/shared/supabase'
 import type { DocumentItem, DocumentInput } from '@/entities/document'
 import type { DocumentRow } from '@/shared/supabase'
-
 import { fail, ok, type ApiResult } from './utils'
 
 function mapDocument(row: DocumentRow): DocumentItem {
@@ -10,7 +9,11 @@ function mapDocument(row: DocumentRow): DocumentItem {
     title: row.title,
     description: row.description ?? '',
     category: row.category,
+    sectionId: row.section_id ?? null,
     fileUrl: row.file_url,
+    fileName: row.file_name,
+    filePath: row.file_path ?? null,
+    source: row.source,
     sortOrder: row.sort_order,
     isPublished: row.is_published,
   }
@@ -43,7 +46,11 @@ export async function createDocument(
       title: input.title,
       description: input.description ?? null,
       category: input.category ?? 'general',
+      section_id: input.sectionId ?? null,
       file_url: input.fileUrl ?? null,
+      file_name: input.fileName ?? null,
+      file_path: input.filePath ?? null,
+      source: input.source ?? null,
       sort_order: input.sortOrder ?? 0,
       is_published: input.isPublished ?? true,
     })
@@ -62,7 +69,11 @@ export async function updateDocument(
   if (input.title !== undefined) payload.title = input.title
   if (input.description !== undefined) payload.description = input.description
   if (input.category !== undefined) payload.category = input.category
+  if (input.sectionId !== undefined) payload.section_id = input.sectionId
   if (input.fileUrl !== undefined) payload.file_url = input.fileUrl
+  if (input.fileName !== undefined) payload.file_name = input.fileName
+  if (input.filePath !== undefined) payload.file_path = input.filePath
+  if (input.source !== undefined) payload.source = input.source
   if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder
   if (input.isPublished !== undefined) payload.is_published = input.isPublished
 
@@ -81,4 +92,13 @@ export async function deleteDocument(id: string): Promise<ApiResult<true>> {
   const { error } = await supabase.from('documents').delete().eq('id', id)
   if (error) return fail(error)
   return ok(true)
+}
+export async function createDocumentDownload(
+  filePath: string,
+  fileName: string | null,
+) {
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .createSignedUrl(filePath, 60, { download: fileName || true })
+  return error ? fail<string>(error) : ok(data.signedUrl)
 }

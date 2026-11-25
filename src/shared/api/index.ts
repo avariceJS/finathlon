@@ -12,6 +12,9 @@ export * as adminApi from './admin'
 export * as siteSettingsApi from './site-settings'
 export * as olympiadsApi from './olympiads'
 export * as olympiadProfilesApi from './olympiad-profiles'
+export * as documentSectionsApi from './document-sections'
+
+export type { DocumentSection } from './document-sections'
 export type { ApiResult } from './utils'
 export type {
   HeroSetting,

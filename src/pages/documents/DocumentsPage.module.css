@@ -1,57 +1,111 @@
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
+.tree,
+.group,
+.sectionContent {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tree {
+  gap: 16px;
   padding-bottom: 64px;
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.sectionBlock {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  scroll-margin-top: 110px;
 }
 
+.sectionTitle,
 .groupTitle {
-  font-size: 22px;
+  margin: 0;
+  font-size: clamp(15px, 2vw, 20px);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
   font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+button.sectionHeader {
+  cursor: pointer;
+}
+button.sectionHeader:hover {
+  background: #f1f5f9;
+}
+.toggleIcon {
+  flex-shrink: 0;
+}
+.sectionContent {
+  padding: 12px;
+}
+.sectionContent[hidden] {
+  display: none;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
 }
 
 .card {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
-  padding: 20px;
-  background: #ffffff;
+  padding: 16px;
   border: 1px solid #eef2f7;
-  border-radius: 14px;
+  border-radius: 12px;
+  background: #fff;
+  overflow-wrap: anywhere;
 }
 
+.cardTitle,
+.cardDescription {
+  margin: 0;
+}
 .cardTitle {
   font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
 }
-
-.cardDescription {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #475467;
-  flex: 1;
-}
-
+.cardDescription,
 .muted {
-  font-size: 13px;
-  color: #94a3b8;
+  color: #475467;
+  font-size: 14px;
+}
+.source {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e40af;
+}
+.olympiad {
+  border-inline-start: 3px solid #2563eb;
+}
+.rsosh {
+  border-inline-start: 3px solid #059669;
+}
+.rsosh .source {
+  color: #065f46;
 }
 
-@media (max-width: 640px) {
-  .grid {
-    grid-template-columns: 1fr;
+@media (max-width: 480px) {
+  .sectionContent {
+    padding: 7px;
+  }
+  .sectionHeader {
+    padding: 12px;
   }
 }

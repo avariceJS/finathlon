@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
-
+import { useCallback, useEffect, useState } from 'react'
 import type { DocumentItem } from '@/entities/document'
-import { documentsApi } from '@/shared/api'
+import { safeDocumentLink } from '@/entities/document/link'
+import {
+  documentsApi,
+  documentSectionsApi,
+  type DocumentSection,
+} from '@/shared/api'
+import { supabase } from '@/shared/supabase'
 import { Alert } from '@/shared/ui/alert/Alert'
 import { Button } from '@/shared/ui/button/Button'
 import { Modal } from '@/shared/ui/modal/Modal'
@@ -10,134 +15,378 @@ import { Spinner } from '@/shared/ui/spinner/Spinner'
 import { TextField } from '@/shared/ui/text-field/TextField'
 import { AdminLayout } from '@/widgets/admin-layout'
 import { AdminTable } from '@/widgets/admin-table'
-
 import styles from './admin-form.module.css'
 
 type Mode =
   | { kind: 'closed' }
-  | { kind: 'create' }
-  | { kind: 'edit'; doc: DocumentItem }
+  | { kind: 'create-doc' }
+  | { kind: 'edit-doc'; doc: DocumentItem }
+  | { kind: 'create-section' }
+  | { kind: 'edit-section'; section: DocumentSection }
 
-type FormState = {
+type DocForm = {
   title: string
   description: string
-  category: string
+  sectionId: string
   fileUrl: string
+  fileName: string
+  filePath: string | null
+  source: 'olympiad' | 'rsosh' | ''
   sortOrder: number
   isPublished: boolean
 }
 
-const EMPTY: FormState = {
+type SectionForm = {
+  title: string
+  slug: string
+  parentId: string
+  sortOrder: number
+  isPublished: boolean
+}
+
+const EMPTY_DOC: DocForm = {
   title: '',
   description: '',
-  category: 'general',
+  sectionId: '',
   fileUrl: '',
+  fileName: '',
+  filePath: null,
+  source: '',
   sortOrder: 0,
   isPublished: true,
 }
 
-const CATEGORIES = [
-  { value: 'general', label: 'Общие документы' },
-  { value: 'regulations', label: 'Положения и регламенты' },
-  { value: 'guides', label: 'Методические материалы' },
-  { value: 'reports', label: 'Отчётность' },
-]
+const EMPTY_SECTION: SectionForm = {
+  title: '',
+  slug: '',
+  parentId: '',
+  sortOrder: 0,
+  isPublished: true,
+}
 
 export function AdminDocumentsPage() {
+  const [activeTab, setActiveTab] = useState<'docs' | 'sections'>('docs')
   const [docs, setDocs] = useState<DocumentItem[]>([])
+  const [sections, setSections] = useState<DocumentSection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
   const [mode, setMode] = useState<Mode>({ kind: 'closed' })
-  const [form, setForm] = useState<FormState>(EMPTY)
+  const [docForm, setDocForm] = useState<DocForm>(EMPTY_DOC)
+  const [sectionForm, setSectionForm] = useState<SectionForm>(EMPTY_SECTION)
   const [isSaving, setIsSaving] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const reload = async () => {
+  const reload = useCallback(async () => {
     setIsLoading(true)
-    setError(null)
-    const res = await documentsApi.listDocuments({ includeUnpublished: true })
-    setDocs(res.data ?? [])
-    setError(res.error)
-    setIsLoading(false)
-  }
+    try {
+      const [docsRes, sectionsRes] = await Promise.all([
+        documentsApi.listDocuments({ includeUnpublished: true }),
+        documentSectionsApi.listDocumentSections({ includeUnpublished: true }),
+      ])
+      setDocs(docsRes.data ?? [])
+      setSections(sectionsRes.data ?? [])
+      setError(docsRes.error ?? sectionsRes.error)
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Не удалось загрузить документы.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     void reload()
-  }, [])
+  }, [reload])
 
-  const openCreate = () => {
-    setForm(EMPTY)
-    setFormError(null)
-    setMode({ kind: 'create' })
+  const closeModal = () => {
+    if (!isSaving) setMode({ kind: 'closed' })
   }
 
-  const openEdit = (doc: DocumentItem) => {
-    setForm({
+  function pickFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+    const suffix = file?.name.split('.').at(-1)?.toLowerCase()
+    if (
+      file &&
+      (!['pdf', 'docx'].includes(suffix ?? '') ||
+        !file.size ||
+        file.size > 15 * 1024 * 1024)
+    ) {
+      setFormError('Выберите непустой PDF или DOCX размером до 15 МБ.')
+      event.target.value = ''
+      setSelectedFile(null)
+      return
+    }
+    setFormError(null)
+    setSelectedFile(file)
+  }
+
+  // --- Обработчики для документов ---
+  const openCreateDoc = () => {
+    if (isSaving) return
+    setFormError(null)
+    setSelectedFile(null)
+    setDocForm(EMPTY_DOC)
+    setMode({ kind: 'create-doc' })
+  }
+
+  const openEditDoc = (doc: DocumentItem) => {
+    if (isSaving) return
+    setFormError(null)
+    setSelectedFile(null)
+    setDocForm({
       title: doc.title,
       description: doc.description,
-      category: doc.category,
+      sectionId: doc.sectionId ?? '',
       fileUrl: doc.fileUrl ?? '',
+      fileName: doc.fileName ?? '',
+      filePath: doc.filePath,
+      source: doc.source ?? '',
       sortOrder: doc.sortOrder,
       isPublished: doc.isPublished,
     })
-    setFormError(null)
-    setMode({ kind: 'edit', doc })
+    setMode({ kind: 'edit-doc', doc })
   }
 
-  const closeModal = () => setMode({ kind: 'closed' })
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleDocSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (isSaving || (mode.kind !== 'create-doc' && mode.kind !== 'edit-doc'))
+      return
+    const title = docForm.title.trim()
+    const fileUrl = docForm.fileUrl.trim()
+    const safeUrl = safeDocumentLink(fileUrl)
+    if (!title || (fileUrl && !safeUrl && !selectedFile)) {
+      setFormError(
+        !title
+          ? 'Укажите название документа.'
+          : 'Укажите ссылку на файл по HTTP или HTTPS.',
+      )
+      return
+    }
     setIsSaving(true)
     setFormError(null)
-    const payload = {
-      title: form.title.trim(),
-      description: form.description,
-      category: form.category,
-      fileUrl: form.fileUrl.trim() || null,
-      sortOrder: form.sortOrder,
-      isPublished: form.isPublished,
+    try {
+      let filePath = fileUrl ? null : docForm.filePath
+      let fileName =
+        !fileUrl || (mode.kind === 'edit-doc' && fileUrl === mode.doc.fileUrl)
+          ? docForm.fileName || null
+          : null
+      if (selectedFile) {
+        const ext = selectedFile.name.split('.').at(-1)?.toLowerCase()
+        const contentType =
+          ext === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        filePath = `${crypto.randomUUID()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, selectedFile, { contentType })
+        if (uploadError) {
+          setFormError('Ошибка загрузки: ' + uploadError.message)
+          return
+        }
+        fileName = selectedFile.name
+        const savedPath = filePath
+        setDocForm((current) => ({
+          ...current,
+          filePath: savedPath,
+          fileName: selectedFile.name,
+          fileUrl: '',
+        }))
+        setSelectedFile(null)
+      }
+      const payload = {
+        title,
+        description: docForm.description,
+        sectionId: docForm.sectionId || null,
+        fileUrl: filePath ? null : safeUrl,
+        filePath,
+        fileName,
+        source: docForm.source || null,
+        sortOrder: docForm.sortOrder,
+        isPublished: docForm.isPublished,
+      }
+      const result =
+        mode.kind === 'create-doc'
+          ? await documentsApi.createDocument(payload)
+          : await documentsApi.updateDocument(mode.doc.id, payload)
+      if (result.error) {
+        setFormError(result.error)
+        return
+      }
+      setMode({ kind: 'closed' })
+      await reload()
+    } catch (cause) {
+      setFormError(
+        cause instanceof Error
+          ? cause.message
+          : 'Не удалось сохранить документ.',
+      )
+    } finally {
+      setIsSaving(false)
     }
-    const result =
-      mode.kind === 'create'
-        ? await documentsApi.createDocument(payload)
-        : mode.kind === 'edit'
-          ? await documentsApi.updateDocument(mode.doc.id, payload)
-          : { error: 'Неизвестное действие' as string | null, data: null }
-    setIsSaving(false)
-    if (result.error) {
-      setFormError(result.error)
-      return
-    }
-    closeModal()
-    await reload()
   }
 
-  const handleDelete = async (doc: DocumentItem) => {
-    if (!confirm(`Удалить «${doc.title}»?`)) return
-    const res = await documentsApi.deleteDocument(doc.id)
-    if (res.error) {
-      setError(res.error)
+  const openCreateSection = () => {
+    if (isSaving) return
+    setFormError(null)
+    setSectionForm(EMPTY_SECTION)
+    setMode({ kind: 'create-section' })
+  }
+
+  const openEditSection = (section: DocumentSection) => {
+    if (isSaving) return
+    setFormError(null)
+    setSectionForm({
+      title: section.title,
+      slug: section.slug,
+      parentId: section.parentId ?? '',
+      sortOrder: section.sortOrder,
+      isPublished: section.isPublished,
+    })
+    setMode({ kind: 'edit-section', section })
+  }
+
+  const handleSectionSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (
+      isSaving ||
+      (mode.kind !== 'create-section' && mode.kind !== 'edit-section')
+    )
+      return
+    const title = sectionForm.title.trim()
+    const slug = sectionForm.slug.trim()
+    if (!title || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+      setFormError(
+        'Укажите название и адрес раздела латиницей. Используйте цифры и дефисы.',
+      )
       return
     }
-    await reload()
+    setIsSaving(true)
+    setFormError(null)
+    try {
+      const payload = {
+        title,
+        slug,
+        parentId: sectionForm.parentId || null,
+        sortOrder: sectionForm.sortOrder,
+        isPublished: sectionForm.isPublished,
+      }
+      const result =
+        mode.kind === 'create-section'
+          ? await documentSectionsApi.createDocumentSection(payload)
+          : await documentSectionsApi.updateDocumentSection(
+              mode.section.id,
+              payload,
+            )
+      if (result.error) {
+        setFormError(result.error)
+        return
+      }
+      setMode({ kind: 'closed' })
+      await reload()
+    } catch (cause) {
+      setFormError(
+        cause instanceof Error ? cause.message : 'Не удалось сохранить раздел.',
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
+
+  const handleDeleteDoc = async (doc: DocumentItem) => {
+    if (isSaving) return
+    if (!confirm(`Удалить «${doc.title}»?`)) return
+    const result = await documentsApi.deleteDocument(doc.id)
+    if (result.error) setError(result.error)
+    else await reload()
+  }
+
+  const handleDeleteSection = async (section: DocumentSection) => {
+    if (isSaving) return
+    if (
+      sections.some((item) => item.parentId === section.id) ||
+      docs.some((doc) => doc.sectionId === section.id)
+    ) {
+      setError('Сначала перенесите документы и подразделы в другое место.')
+      return
+    }
+    if (!confirm(`Удалить раздел «${section.title}»?`)) return
+    const result = await documentSectionsApi.deleteDocumentSection(section.id)
+    if (result.error) setError(result.error)
+    else await reload()
+  }
+
+  const editedSectionId = mode.kind === 'edit-section' ? mode.section.id : null
+  const parentOptions = sections.filter((section) => {
+    const seen = new Set<string>()
+    let parent: DocumentSection | undefined = section
+    while (parent) {
+      if (
+        parent.id === editedSectionId ||
+        seen.has(parent.id) ||
+        seen.size >= 2
+      )
+        return false
+      seen.add(parent.id)
+      parent = sections.find((item) => item.id === parent?.parentId)
+    }
+    return true
+  })
 
   return (
     <AdminLayout
       title="Документы"
-      description="Файлы и регламенты, доступные на странице /documents."
-      actions={<Button onClick={openCreate}>+ Документ</Button>}
+      description="Управление файлами и структурой меню."
+      actions={
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {activeTab === 'docs' ? (
+            <Button onClick={openCreateDoc}>+ Документ</Button>
+          ) : (
+            <Button onClick={openCreateSection}>+ Раздел</Button>
+          )}
+        </div>
+      }
     >
-      {error ? (
-        <Alert variant="error" title="Ошибка">
-          {error}
-        </Alert>
-      ) : null}
+      <div
+        style={{
+          display: 'flex',
+          gap: '16px',
+          marginBottom: '24px',
+          borderBottom: '1px solid #eef2f7',
+        }}
+      >
+        <button
+          onClick={() => setActiveTab('docs')}
+          style={{
+            padding: '12px',
+            fontWeight: activeTab === 'docs' ? 700 : 400,
+            borderBottom: activeTab === 'docs' ? '2px solid #4f9cf9' : 'none',
+          }}
+        >
+          Документы
+        </button>
+        <button
+          onClick={() => setActiveTab('sections')}
+          style={{
+            padding: '12px',
+            fontWeight: activeTab === 'sections' ? 700 : 400,
+            borderBottom:
+              activeTab === 'sections' ? '2px solid #4f9cf9' : 'none',
+          }}
+        >
+          Разделы меню
+        </button>
+      </div>
 
+      {error && <Alert variant="error">{error}</Alert>}
       {isLoading ? (
-        <Spinner label="Загружаем..." />
-      ) : (
+        <Spinner />
+      ) : activeTab === 'docs' ? (
         <AdminTable
           data={docs}
           rowKey={(item) => item.id}
@@ -148,19 +397,29 @@ export function AdminDocumentsPage() {
               render: (item) => <strong>{item.title}</strong>,
             },
             {
-              key: 'category',
-              header: 'Категория',
+              key: 'section',
+              header: 'Раздел',
               render: (item) =>
-                CATEGORIES.find((c) => c.value === item.category)?.label ??
-                item.category,
-              width: '220px',
+                sections.find((s) => s.id === item.sectionId)?.title ?? '—',
             },
             {
-              key: 'order',
-              header: '#',
-              render: (item) => item.sortOrder,
-              width: '60px',
-              align: 'center',
+              key: 'source',
+              header: 'Источник',
+              render: (item) => {
+                if (item.source === 'olympiad')
+                  return (
+                    <span style={{ color: '#2563eb', fontWeight: 600 }}>
+                      Финатлон
+                    </span>
+                  )
+                if (item.source === 'rsosh')
+                  return (
+                    <span style={{ color: '#059669', fontWeight: 600 }}>
+                      РСОШ
+                    </span>
+                  )
+                return '—'
+              },
             },
             {
               key: 'status',
@@ -174,99 +433,315 @@ export function AdminDocumentsPage() {
                   {item.isPublished ? 'Опубликовано' : 'Скрыто'}
                 </span>
               ),
-              width: '140px',
             },
             {
               key: 'actions',
               header: '',
-              align: 'right',
               render: (item) => (
                 <div className={styles.rowActions}>
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditDoc(item)}
+                  >
                     Редактировать
                   </Button>
                   <Button
                     size="sm"
                     variant="danger"
-                    onClick={() => handleDelete(item)}
+                    onClick={() => handleDeleteDoc(item)}
                   >
                     Удалить
                   </Button>
                 </div>
               ),
-              width: '240px',
+            },
+          ]}
+        />
+      ) : (
+        <AdminTable
+          data={sections}
+          rowKey={(item) => item.id}
+          columns={[
+            {
+              key: 'title',
+              header: 'Название',
+              render: (item) => <strong>{item.title}</strong>,
+            },
+            {
+              key: 'parent',
+              header: 'Родитель',
+              render: (item) =>
+                sections.find((s) => s.id === item.parentId)?.title ??
+                'Корневой',
+            },
+            {
+              key: 'order',
+              header: '#',
+              render: (item) => item.sortOrder,
+              width: '60px',
+            },
+            {
+              key: 'status',
+              header: 'Статус',
+              render: (item) => (
+                <span
+                  className={
+                    item.isPublished ? styles.badgeOk : styles.badgeMuted
+                  }
+                >
+                  {item.isPublished ? 'Виден' : 'Скрыт'}
+                </span>
+              ),
+            },
+            {
+              key: 'actions',
+              header: '',
+              render: (item) => (
+                <div className={styles.rowActions}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditSection(item)}
+                  >
+                    Редактировать
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => handleDeleteSection(item)}
+                  >
+                    Удалить
+                  </Button>
+                </div>
+              ),
             },
           ]}
         />
       )}
 
-      <Modal isOpen={mode.kind !== 'closed'} onClose={closeModal}>
-        <form className={styles.form} onSubmit={handleSubmit}>
+      {/* --- Модалка для документов --- */}
+      <Modal
+        isOpen={mode.kind === 'create-doc' || mode.kind === 'edit-doc'}
+        onClose={closeModal}
+      >
+        <form className={styles.form} onSubmit={handleDocSubmit}>
           <h2 className={styles.formTitle}>
-            {mode.kind === 'create' ? 'Новый документ' : 'Редактировать'}
+            {mode.kind === 'create-doc'
+              ? 'Новый документ'
+              : 'Редактировать документ'}
           </h2>
-
-          {formError ? <Alert variant="error">{formError}</Alert> : null}
-
+          {formError && <Alert variant="error">{formError}</Alert>}
           <TextField
             label="Название"
             required
-            value={form.title}
-            onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+            value={docForm.title}
+            onChange={(e) =>
+              setDocForm((p) => ({ ...p, title: e.target.value }))
+            }
           />
           <TextField
             multiline
             label="Описание"
-            value={form.description}
+            value={docForm.description}
             onChange={(e) =>
-              setForm((p) => ({ ...p, description: e.target.value }))
+              setDocForm((p) => ({ ...p, description: e.target.value }))
             }
-            rows={4}
           />
-          <div className={styles.grid2}>
-            <Select
-              label="Категория"
-              value={form.category}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, category: e.target.value }))
-              }
-              options={CATEGORIES}
+
+          <Select
+            label="Раздел"
+            value={docForm.sectionId}
+            onChange={(e) =>
+              setDocForm((p) => ({ ...p, sectionId: e.target.value }))
+            }
+            options={[
+              { value: '', label: 'Без раздела' },
+              ...sections.map((s) => ({ value: s.id, label: s.title })),
+            ]}
+          />
+
+          <Select
+            label="Источник"
+            value={docForm.source}
+            onChange={(e) =>
+              setDocForm((p) => ({
+                ...p,
+                source:
+                  e.target.value === 'olympiad' || e.target.value === 'rsosh'
+                    ? e.target.value
+                    : '',
+              }))
+            }
+            options={[
+              { value: '', label: 'Не указан' },
+              { value: 'olympiad', label: 'Документ олимпиады' },
+              { value: 'rsosh', label: 'Документ РСОШ' },
+            ]}
+          />
+
+          <div>
+            <label htmlFor="document-file">
+              Загрузить файл (PDF или DOCX, до 15 МБ)
+            </label>
+            <input
+              id="document-file"
+              type="file"
+              accept=".pdf,.docx"
+              onChange={pickFile}
+              disabled={isSaving}
             />
-            <TextField
-              label="Ссылка на файл"
-              value={form.fileUrl}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, fileUrl: e.target.value }))
-              }
-              placeholder="https://"
-            />
+            {selectedFile || docForm.filePath ? (
+              <div>
+                <p>
+                  {selectedFile?.name ?? docForm.fileName ?? 'Файл прикреплён'}
+                </p>
+                <Button
+                  disabled={isSaving}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null)
+                    setDocForm((current) => ({
+                      ...current,
+                      fileName: '',
+                      filePath: null,
+                    }))
+                    const input = document.getElementById('document-file')
+                    if (input instanceof HTMLInputElement) input.value = ''
+                  }}
+                >
+                  Убрать файл
+                </Button>
+              </div>
+            ) : null}
           </div>
+          <TextField
+            label="Внешняя ссылка на документ"
+            value={docForm.fileUrl}
+            disabled={isSaving}
+            onChange={(event) => {
+              setSelectedFile(null)
+              setDocForm((current) => ({
+                ...current,
+                fileUrl: event.target.value,
+              }))
+              const input = document.getElementById('document-file')
+              if (input instanceof HTMLInputElement) input.value = ''
+            }}
+            placeholder="https://"
+          />
+
           <div className={styles.grid2}>
             <TextField
               type="number"
               label="Порядок"
-              value={String(form.sortOrder)}
+              value={String(docForm.sortOrder)}
               onChange={(e) =>
-                setForm((p) => ({
+                setDocForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))
+              }
+            />
+            <label className={styles.toggle}>
+              <input
+                type="checkbox"
+                checked={docForm.isPublished}
+                onChange={(e) =>
+                  setDocForm((p) => ({ ...p, isPublished: e.target.checked }))
+                }
+              />
+              <span>Опубликован</span>
+            </label>
+          </div>
+          <div className={styles.formActions}>
+            <Button
+              type="button"
+              disabled={isSaving}
+              variant="ghost"
+              onClick={closeModal}
+            >
+              Отмена
+            </Button>
+            <Button type="submit" loading={isSaving}>
+              Сохранить
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* --- Модалка для разделов --- */}
+      <Modal
+        isOpen={mode.kind === 'create-section' || mode.kind === 'edit-section'}
+        onClose={closeModal}
+      >
+        <form className={styles.form} onSubmit={handleSectionSubmit}>
+          <h2 className={styles.formTitle}>
+            {mode.kind === 'create-section'
+              ? 'Новый раздел'
+              : 'Редактировать раздел'}
+          </h2>
+          {formError && <Alert variant="error">{formError}</Alert>}
+          <TextField
+            label="Название"
+            required
+            value={sectionForm.title}
+            onChange={(e) =>
+              setSectionForm((p) => ({ ...p, title: e.target.value }))
+            }
+          />
+          <TextField
+            label="Slug (для ссылки)"
+            required
+            value={sectionForm.slug}
+            onChange={(e) =>
+              setSectionForm((p) => ({ ...p, slug: e.target.value }))
+            }
+            hint="латиница, без пробелов"
+          />
+          <Select
+            label="Родительский раздел"
+            value={sectionForm.parentId}
+            onChange={(e) =>
+              setSectionForm((p) => ({ ...p, parentId: e.target.value }))
+            }
+            options={[
+              { value: '', label: 'Корневой (верхний уровень)' },
+              ...parentOptions.map((s) => ({ value: s.id, label: s.title })),
+            ]}
+          />
+          <div className={styles.grid2}>
+            <TextField
+              type="number"
+              label="Порядок"
+              value={String(sectionForm.sortOrder)}
+              onChange={(e) =>
+                setSectionForm((p) => ({
                   ...p,
-                  sortOrder: Number(e.target.value) || 0,
+                  sortOrder: Number(e.target.value),
                 }))
               }
             />
             <label className={styles.toggle}>
               <input
                 type="checkbox"
-                checked={form.isPublished}
+                checked={sectionForm.isPublished}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, isPublished: e.target.checked }))
+                  setSectionForm((p) => ({
+                    ...p,
+                    isPublished: e.target.checked,
+                  }))
                 }
               />
-              <span>Опубликовано</span>
+              <span>Опубликован</span>
             </label>
           </div>
-
           <div className={styles.formActions}>
-            <Button type="button" variant="ghost" onClick={closeModal}>
+            <Button
+              type="button"
+              disabled={isSaving}
+              variant="ghost"
+              onClick={closeModal}
+            >
               Отмена
             </Button>
             <Button type="submit" loading={isSaving}>

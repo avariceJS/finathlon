@@ -1,11 +1,20 @@
 const { test, expect } = require('@playwright/test')
 
 const title = 'Финансовая олимпиада: подготовка, участие и возможности для школьников'
+const documentSections = [
+  { id: 'olympiad', title: 'Олимпиада', slug: 'olympiad', parent_id: null },
+  { id: 'season', title: 'Текущий сезон', slug: 'season', parent_id: 'olympiad' },
+  { id: 'profile', title: 'Первый профиль', slug: 'profile', parent_id: 'season' },
+]
 const fixture = {
   news: [{ id: '1', slug: 'test-news', title, summary: 'Материалы для участников.', content: 'Новости олимпиады.', cover_url: '/banner.jpg', author_name: 'Финатлон', published_at: '2026-09-01T00:00:00Z', is_published: true }],
   programs: [{ id: '1', slug: 'test-program', title, summary: 'Участие в олимпиаде.', description: 'Описание.', highlights: ['Для школьников'], cta_label: 'Участвовать', cta_href: '/events', sort_order: 1, is_published: true }],
   partners: [{ id: '1', name: 'Организатор олимпиады', description: 'Поддержка участников.', logo_url: '/logoreg.png', website_url: null, kind: 'partner', sort_order: 1, is_published: true }],
-  documents: [{ id: '1', title: 'Положение об олимпиаде', description: 'Правила участия.', category: 'general', file_url: '/banner.jpg', sort_order: 1, is_published: true }],
+  documents: [
+    { id: '1', title: 'Положение об олимпиаде', description: 'Правила участия.', category: 'general', file_url: '/banner.jpg', sort_order: 1, is_published: true },
+    { id: '2', title: 'Регламент первого профиля', section_id: 'profile', file_url: 'https://example.com/regulation.pdf', sort_order: 1, is_published: true },
+  ],
+  document_sections: documentSections,
   stats: [{ id: '1', metric_key: 'participants', value_text: '70 000+', label: 'участников', sort_order: 1, is_published: true }],
   timeline_events: [{ id: '1', title: 'Регистрация участников', date_label: 'Сентябрь', event_year: 2026, accent: 'blue', sort_order: 1, is_published: true }],
   faqs: [{ id: '1', question: 'Как принять участие?', answer: 'Зарегистрируйтесь.', sort_order: 1, is_published: true }],
@@ -46,6 +55,24 @@ test('short screen menu scrolls and its links work', async ({ page }) => {
   await link.scrollIntoViewIfNeeded()
   await link.click()
   await expect(page).toHaveURL(/\/documents$/)
+})
+
+test('the mobile documents menu opens nested sections and preserves older cards', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 600 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Меню' }).click()
+  const navigation = page.getByRole('navigation', { name: 'Мобильная навигация' })
+  await navigation.getByRole('button', { name: 'Разделы документов' }).click()
+  await navigation.getByRole('link', { name: 'Первый профиль' }).click()
+
+  await expect(page).toHaveURL('/documents#profile')
+  for (const section of documentSections) {
+    await expect(page.getByRole('button', { name: section.title, exact: true })).toHaveAttribute('aria-expanded', 'true')
+  }
+  const regulation = page.getByRole('article').filter({ hasText: 'Регламент первого профиля' })
+  await expect(regulation.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', 'https://example.com/regulation.pdf')
+  await expect(page.getByRole('heading', { name: 'Положение об олимпиаде' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321)
 })
 
 test('sign-in fits on a phone and opens the olympiad registration page', async ({ page }) => {

@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/button/Button'
 import { Container } from '@/shared/ui/container/Container'
 import { Logo } from '@/shared/ui/logo/Logo'
 
+import { HeaderDropdown } from './HeaderDropdown'
 import styles from './Header.module.css'
 
 type HeaderProps = {
@@ -56,19 +57,24 @@ export function Header({ variant = 'public' }: HeaderProps) {
             className={cx(styles.nav, isMobileOpen && styles.navOpen)}
             aria-label="Основная навигация"
           >
-            {SITE_NAVIGATION.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={closeMobile}
-                className={({ isActive }) =>
-                  cx(styles.navLink, isActive && styles.navLinkActive)
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {SITE_NAVIGATION.map((item) => {
+              if (item.to === '/documents') {
+                return <HeaderDropdown key={item.to} onNavigate={closeMobile} />
+              }
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={closeMobile}
+                  className={({ isActive }) =>
+                    cx(styles.navLink, isActive && styles.navLinkActive)
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              )
+            })}
           </nav>
 
           <div className={styles.right}>
@@ -90,7 +96,11 @@ export function Header({ variant = 'public' }: HeaderProps) {
                   title={displayName}
                 >
                   <span className={styles.profileAvatar}>
-                    {initials(profile?.firstName, profile?.lastName, user.email)}
+                    {initials(
+                      profile?.firstName,
+                      profile?.lastName,
+                      user.email,
+                    )}
                   </span>
                   <span className={styles.profileName}>{displayName}</span>
                 </Link>
@@ -126,29 +136,47 @@ export function Header({ variant = 'public' }: HeaderProps) {
         {isMobileOpen ? (
           <div className={styles.mobilePanel}>
             <Container className={styles.mobileInner}>
-              <nav className={styles.mobileNav} aria-label="Мобильная навигация">
-                {SITE_NAVIGATION.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    onClick={closeMobile}
-                    className={({ isActive }) =>
-                      cx(
-                        styles.mobileLink,
-                        isActive && styles.mobileLinkActive,
-                      )
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
+              <nav
+                className={styles.mobileNav}
+                aria-label="Мобильная навигация"
+              >
+                {SITE_NAVIGATION.map((item) => {
+                  if (item.to === '/documents') {
+                    return (
+                      <HeaderDropdown
+                        key={item.to}
+                        onNavigate={closeMobile}
+                        mobile
+                      />
+                    )
+                  }
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.to === '/'}
+                      onClick={closeMobile}
+                      className={({ isActive }) =>
+                        cx(
+                          styles.mobileLink,
+                          isActive && styles.mobileLinkActive,
+                        )
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  )
+                })}
               </nav>
 
               <div className={styles.mobileActions}>
                 {user ? (
                   <>
-                    <Button to="/account/personal" onClick={closeMobile} fullWidth>
+                    <Button
+                      to="/account/personal"
+                      onClick={closeMobile}
+                      fullWidth
+                    >
                       Личный кабинет
                     </Button>
                     {isAdmin ? (
@@ -161,11 +189,7 @@ export function Header({ variant = 'public' }: HeaderProps) {
                         Админ-панель
                       </Button>
                     ) : null}
-                    <Button
-                      variant="ghost"
-                      onClick={handleSignOut}
-                      fullWidth
-                    >
+                    <Button variant="ghost" onClick={handleSignOut} fullWidth>
                       Выйти
                     </Button>
                   </>
@@ -187,10 +211,7 @@ export function Header({ variant = 'public' }: HeaderProps) {
       </header>
 
       {isAuthOpen ? (
-        <AuthModal
-          isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
-        />
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       ) : null}
     </>
   )
